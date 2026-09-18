@@ -1,0 +1,545 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ניהול תקציב אישי</title>
+
+  <!-- אייקון קטן שיופיע בכרטיסייה של הדפדפן -->
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💰</text></svg>">
+
+  <!-- גופן "Rubik" מ-Google Fonts - נראה נעים ומודרני, ותומך טוב בעברית -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="style.css">
+
+  <!-- ===== PWA (שלב 17) ===== -->
+  <!-- ה-manifest מגדיר איך האפליקציה מתנהגת כשמתקינים אותה (שם, אייקונים, צבעים) -->
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#4f46e5">
+
+  <!-- תמיכה בהתקנה כאפליקציית מסך-בית באייפון (iOS לא קורא manifest.json באופן מלא) -->
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="תקציב">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+</head>
+<body>
+
+  <header class="app-header">
+    <div class="app-header-inner">
+      <h1>💰 ניהול תקציב אישי</h1>
+      <p class="app-subtitle">כל מה שקורה עם הכסף שלך, במקום אחד</p>
+    </div>
+  </header>
+
+  <main class="app-main">
+
+    <!-- ה-Dashboard: 4 כרטיסים שמראים את התמונה הכללית -->
+    <section class="dashboard">
+
+      <div class="card card-income">
+        <div class="card-icon">💰</div>
+        <div class="card-label">הכנסה חודשית</div>
+        <div class="card-value" id="income-value">₪0</div>
+      </div>
+
+      <div class="card card-expenses">
+        <div class="card-icon">💸</div>
+        <div class="card-label">הוצאות</div>
+        <div class="card-value" id="expenses-value">₪0</div>
+        <!-- שורה קטנה שמראה כמה מההוצאות קבועות וכמה משתנות -->
+        <div class="card-breakdown" id="expenses-breakdown">קבועות ₪0 · משתנות ₪0</div>
+      </div>
+
+      <div class="card card-savings">
+        <div class="card-icon">🏦</div>
+        <div class="card-label">חיסכון</div>
+        <div class="card-value" id="savings-value">₪0</div>
+      </div>
+
+      <div class="card card-remaining">
+        <div class="card-icon">📊</div>
+        <div class="card-label">נשאר</div>
+        <div class="card-value" id="remaining-value">₪0</div>
+      </div>
+
+      <!-- כרטיס "מותר להוציא היום" - מתמלא ע"י renderSpendingLimitCard() ב-script.js -->
+      <div class="card card-spending-limit" id="spending-limit-card">
+        <div class="card-icon">💸</div>
+        <div class="card-label">מותר להוציא היום</div>
+        <div class="card-value" id="spending-limit-value">₪0</div>
+        <div class="card-breakdown" id="spending-limit-breakdown"></div>
+      </div>
+
+      <!-- כרטיס "יתרה נוכחית" - ערך שמוזנת ידנית, ולא מחושב אוטומטית מהכנסות/הוצאות -->
+      <div class="card card-balance" id="balance-card">
+        <div class="card-icon">🏦</div>
+        <div class="card-label">יתרה נוכחית</div>
+        <div class="card-value" id="balance-value">₪0</div>
+        <div class="balance-edit-row">
+          <input type="number" id="balance-input" min="0" placeholder="עדכני יתרה">
+          <button type="button" id="balance-save-button" class="secondary-button">שמור</button>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- מרכז שליטה חודשי - תצוגה מרוכזת של מצב החודש הנוכחי. כולה תצוגה בלבד -
+         כל הנתונים מגיעים מהחישובים הקיימים באפליקציה (הכנסה/הוצאות/חיסכון/נשאר/תקציבים/ימי החודש),
+         ולא נוצר כאן שום חישוב כספי מקביל. -->
+    <section class="card form-card" id="month-summary-card">
+      <h2 class="form-title">📊 סיכום החודש</h2>
+
+      <div class="cashflow-summary">
+        <div class="cashflow-summary-item">
+          <div class="cashflow-summary-label">💰 הכנסות בפועל</div>
+          <div class="cashflow-summary-value income" id="month-summary-income">₪0</div>
+        </div>
+        <div class="cashflow-summary-item">
+          <div class="cashflow-summary-label">💸 הוצאות בפועל</div>
+          <div class="cashflow-summary-value expense" id="month-summary-expenses">₪0</div>
+        </div>
+        <div class="cashflow-summary-item">
+          <div class="cashflow-summary-label">💾 חיסכון</div>
+          <div class="cashflow-summary-value savings" id="month-summary-savings">₪0</div>
+        </div>
+        <div class="cashflow-summary-item">
+          <div class="cashflow-summary-label">💳 נשאר להוצאות</div>
+          <div class="cashflow-summary-value" id="month-summary-remaining">₪0</div>
+        </div>
+      </div>
+
+      <div class="month-progress-row">
+        <div class="month-progress-label" id="month-days-label">📅 עברו 0 מתוך 0 ימים</div>
+        <div class="progress-bar-track">
+          <div class="progress-bar-fill" id="month-days-progress-fill" style="width: 0%"></div>
+        </div>
+      </div>
+
+      <div class="month-progress-row">
+        <div class="month-progress-label" id="month-budget-label">🎯 ניצול תקציב ההוצאות</div>
+        <div class="progress-bar-track">
+          <div class="progress-bar-fill" id="month-budget-progress-fill" style="width: 0%"></div>
+        </div>
+      </div>
+
+      <div class="month-pace-line" id="month-pace-line"></div>
+    </section>
+
+    <!-- גרפים ויזואליים להוצאות - תצוגה בלבד, מבוססת על הנתונים הקיימים (expensesFixed/
+         expensesVariable/budgets). לא נוצר כאן שום מנגנון שמירה חדש. בלי ספריות חיצוניות -
+         הגרפים הם SVG/HTML/CSS טהורים, כך שהאפליקציה ממשיכה לעבוד לגמרי offline. -->
+    <div class="charts-row">
+
+      <section class="card form-card charts-row-item" id="expense-breakdown-card">
+        <h2 class="form-title">🥧 לאן הכסף הולך?</h2>
+        <div class="chart-row">
+          <div class="donut-chart-wrapper" id="expense-breakdown-chart"></div>
+          <!-- הרשימה הזו מתמלאת ע"י JavaScript (renderExpenseBreakdownChart) -->
+          <div class="legend-list" id="expense-breakdown-list"></div>
+        </div>
+      </section>
+
+      <section class="card form-card charts-row-item" id="budget-comparison-card">
+        <h2 class="form-title">📊 תקציב מול הוצאה בפועל</h2>
+        <!-- הרשימה הזו מתמלאת ע"י JavaScript (renderBudgetComparisonChart) -->
+        <div id="budget-comparison-list"></div>
+      </section>
+
+    </div>
+
+    <!-- טופס עדכון הכנסה -->
+    <section class="card form-card">
+      <h2 class="form-title">💰 עדכון הכנסה חודשית</h2>
+
+      <form id="income-form">
+        <div class="form-row">
+          <label for="salary-input">משכורת</label>
+          <input type="number" id="salary-input" placeholder="לדוגמה: 8000" min="0">
+        </div>
+
+        <div class="form-row">
+          <label for="other-income-input">הכנסה נוספת</label>
+          <input type="number" id="other-income-input" placeholder="לדוגמה: 500" min="0">
+        </div>
+
+        <button type="submit">עדכן הכנסה</button>
+      </form>
+    </section>
+
+    <!-- טופס עדכון הוצאות -->
+    <!-- שדה נפרד לכל קטגוריה, בכל שדה מזינים את הסכום הכולל שהוצאת בקטגוריה הזו החודש -->
+    <section class="card form-card">
+      <h2 class="form-title">💸 עדכון הוצאות חודשיות</h2>
+
+      <form id="expenses-form">
+
+        <h3 class="expenses-subtitle">הוצאות קבועות</h3>
+        <div class="expenses-grid">
+          <div class="form-row">
+            <label for="exp-rent">שכר דירה</label>
+            <input type="number" id="exp-rent" min="0" placeholder="0">
+          </div>
+          <div class="form-row">
+            <label for="exp-arnona">ארנונה</label>
+            <input type="number" id="exp-arnona" min="0" placeholder="0">
+          </div>
+          <div class="form-row">
+            <label for="exp-electricity">חשמל</label>
+            <input type="number" id="exp-electricity" min="0" placeholder="0">
+          </div>
+          <div class="form-row">
+            <label for="exp-water">מים</label>
+            <input type="number" id="exp-water" min="0" placeholder="0">
+          </div>
+          <div class="form-row">
+            <label for="exp-vaad">ועד בית</label>
+            <input type="number" id="exp-vaad" min="0" placeholder="0">
+          </div>
+          <div class="form-row">
+            <label for="exp-internet">אינטרנט</label>
+            <input type="number" id="exp-internet" min="0" placeholder="0">
+          </div>
+          <div class="form-row">
+            <label for="exp-phone">טלפון</label>
+            <input type="number" id="exp-phone" min="0" placeholder="0">
+          </div>
+          <div class="form-row">
+            <label for="exp-insurance">ביטוחים</label>
+            <input type="number" id="exp-insurance" min="0" placeholder="0">
+          </div>
+          <div class="form-row">
+            <label for="exp-subscriptions">מנויים</label>
+            <input type="number" id="exp-subscriptions" min="0" placeholder="0">
+          </div>
+        </div>
+
+        <h3 class="expenses-subtitle">הוצאות משתנות</h3>
+        <div class="expenses-grid">
+          <div class="form-row">
+            <label for="exp-super">סופר</label>
+            <input type="number" id="exp-super" min="0" placeholder="0">
+          </div>
+          <div class="form-row">
+            <label for="exp-restaurants">מסעדות ואוכל בחוץ</label>
+            <input type="number" id="exp-restaurants" min="0" placeholder="0">
+          </div>
+          <div class="form-row">
+            <label for="exp-transport">תחבורה</label>
+            <input type="number" id="exp-transport" min="0" placeholder="0">
+          </div>
+          <div class="form-row">
+            <label for="exp-car">רכב</label>
+            <input type="number" id="exp-car" min="0" placeholder="0">
+          </div>
+          <div class="form-row">
+            <label for="exp-shopping">קניות</label>
+            <input type="number" id="exp-shopping" min="0" placeholder="0">
+          </div>
+          <div class="form-row">
+            <label for="exp-fun">בילויים</label>
+            <input type="number" id="exp-fun" min="0" placeholder="0">
+          </div>
+          <div class="form-row">
+            <label for="exp-health">בריאות</label>
+            <input type="number" id="exp-health" min="0" placeholder="0">
+          </div>
+          <div class="form-row">
+            <label for="exp-other">שונות</label>
+            <input type="number" id="exp-other" min="0" placeholder="0">
+          </div>
+        </div>
+
+        <button type="submit">עדכן הוצאות</button>
+      </form>
+    </section>
+
+    <!-- תקציבים חודשיים - רק להוצאות המשתנות -->
+    <section class="card form-card">
+      <h2 class="form-title">🎯 תקציבים חודשיים (הוצאות משתנות)</h2>
+
+      <form id="budgets-form">
+        <div class="expenses-grid">
+          <div class="form-row">
+            <label for="budget-super">סופר</label>
+            <input type="number" id="budget-super" min="0" placeholder="0">
+          </div>
+          <div class="form-row">
+            <label for="budget-restaurants">מסעדות ואוכל בחוץ</label>
+            <input type="number" id="budget-restaurants" min="0" placeholder="0">
+          </div>
+          <div class="form-row">
+            <label for="budget-transport">תחבורה</label>
+            <input type="number" id="budget-transport" min="0" placeholder="0">
+          </div>
+          <div class="form-row">
+            <label for="budget-car">רכב</label>
+            <input type="number" id="budget-car" min="0" placeholder="0">
+          </div>
+          <div class="form-row">
+            <label for="budget-shopping">קניות</label>
+            <input type="number" id="budget-shopping" min="0" placeholder="0">
+          </div>
+          <div class="form-row">
+            <label for="budget-fun">בילויים</label>
+            <input type="number" id="budget-fun" min="0" placeholder="0">
+          </div>
+          <div class="form-row">
+            <label for="budget-health">בריאות</label>
+            <input type="number" id="budget-health" min="0" placeholder="0">
+          </div>
+          <div class="form-row">
+            <label for="budget-other">שונות</label>
+            <input type="number" id="budget-other" min="0" placeholder="0">
+          </div>
+        </div>
+
+        <button type="submit">עדכן תקציבים</button>
+      </form>
+
+      <!-- הטבלה הזו מתמלאת ע"י JavaScript (renderBudgetTable) ולא כתובה כאן בקוביים -->
+      <table class="budget-table">
+        <thead>
+          <tr>
+            <th>קטגוריה</th>
+            <th>מתוכנן</th>
+            <th>בפועל</th>
+            <th>נשאר</th>
+          </tr>
+        </thead>
+        <tbody id="budget-table-body"></tbody>
+      </table>
+    </section>
+
+    <!-- מטרות חיסכון -->
+    <section class="card form-card">
+      <h2 class="form-title">🏆 מטרות חיסכון</h2>
+
+      <form id="goal-form">
+        <div class="form-row">
+          <label for="goal-name">שם המטרה (אפשר גם עם אימוג'י, למשל ✈️ טיול)</label>
+          <input type="text" id="goal-name" placeholder="לדוגמה: ✈️ טיול לאיטליה">
+        </div>
+
+        <div class="expenses-grid">
+          <div class="form-row">
+            <label for="goal-target">סכום יעד</label>
+            <input type="number" id="goal-target" min="0" placeholder="0">
+          </div>
+          <div class="form-row">
+            <label for="goal-saved">כבר נחסך</label>
+            <input type="number" id="goal-saved" min="0" placeholder="0">
+          </div>
+          <div class="form-row">
+            <label for="goal-monthly">הפקדה חודשית מתוכננת</label>
+            <input type="number" id="goal-monthly" min="0" placeholder="0">
+          </div>
+          <div class="form-row">
+            <label for="goal-target-date">תאריך יעד (לא חובה)</label>
+            <input type="date" id="goal-target-date">
+          </div>
+        </div>
+
+        <button type="submit">הוסף מטרה</button>
+      </form>
+
+      <!-- כאן ייכנסו כרטיסי המטרות, שנוצרים דינמית ע"י JavaScript -->
+      <div class="goals-list" id="goals-list"></div>
+    </section>
+
+    <!-- מעקב חודשי + היסטוריה -->
+    <section class="card form-card">
+      <h2 class="form-title">📅 היסטוריה חודשית</h2>
+
+      <p class="current-month">
+        החודש הנוכחי: <strong id="current-month-label"></strong>
+      </p>
+
+      <button type="button" id="close-month-button" class="secondary-button">
+        סגור את החודש ושמור בהיסטוריה
+      </button>
+
+      <!-- הטבלה הזו מתמלאת ע"י JavaScript (renderHistoryTable) -->
+      <table class="budget-table">
+        <thead>
+          <tr>
+            <th>חודש</th>
+            <th>הכנסה</th>
+            <th>הוצאות</th>
+            <th>חיסכון</th>
+            <th>נשאר</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="history-table-body"></tbody>
+      </table>
+    </section>
+
+    <!-- לוח שנה פיננסי -->
+    <section class="card form-card" id="calendar-card">
+      <h2 class="form-title">📅 לוח שנה פיננסי</h2>
+
+      <div class="calendar-header">
+        <button type="button" id="calendar-prev-button" class="secondary-button">◀ חודש קודם</button>
+        <div class="calendar-title" id="calendar-title"></div>
+        <button type="button" id="calendar-next-button" class="secondary-button">חודש הבא ▶</button>
+      </div>
+
+      <button type="button" id="calendar-today-button" class="secondary-button" style="margin-bottom: 14px;">
+        📍 היום
+      </button>
+
+      <!-- הרשת הזו מתמלאת ע"י JavaScript (renderCalendar) -->
+      <div class="calendar-grid" id="calendar-grid"></div>
+    </section>
+
+    <!-- תזרים צפוי - תחזית לפי אירועי לוח השנה של החודש המוצג, בלי חיבור עדיין
+         להכנסות/הוצאות שהוזנו בטפסים למעלה -->
+    <section class="card form-card" id="cashflow-card">
+      <h2 class="form-title">💰 תזרים צפוי</h2>
+
+      <p class="current-month">
+        תחזית לפי אירועי לוח השנה של <strong id="cashflow-month-label"></strong> בלבד.
+      </p>
+
+      <div class="cashflow-summary">
+        <div class="cashflow-summary-item">
+          <div class="cashflow-summary-label">הכנסות צפויות</div>
+          <div class="cashflow-summary-value income" id="cashflow-income-value">₪0</div>
+        </div>
+        <div class="cashflow-summary-item">
+          <div class="cashflow-summary-label">הוצאות צפויות</div>
+          <div class="cashflow-summary-value expense" id="cashflow-expenses-value">₪0</div>
+        </div>
+        <div class="cashflow-summary-item">
+          <div class="cashflow-summary-label">תזרים נטו</div>
+          <div class="cashflow-summary-value" id="cashflow-net-value">₪0</div>
+        </div>
+      </div>
+
+      <!-- הרשימה הכרונולוגית הזו מתמלאת ע"י JavaScript (renderCashFlowSection) -->
+      <div class="cashflow-list" id="cashflow-list"></div>
+    </section>
+
+    <!-- עד המשכורת הבאה - משתמשת ביתרה הנוכחית + באירועי לוח השנה כדי להעריך
+         כמה כסף זמין וכמה אפשר להוציא ביום עד המשכורת הבאה. זה חישוב נפרד ונוסף
+         לכרטיס "מותר להוציא היום" הקיים למעלה - הוא לא מחליף אותו. -->
+    <section class="card form-card" id="next-salary-card">
+      <h2 class="form-title">💰 עד המשכורת הבאה</h2>
+
+      <p class="current-month" id="next-salary-date-line">💰 המשכורת הבאה: —</p>
+
+      <div class="cashflow-summary">
+        <div class="cashflow-summary-item">
+          <div class="cashflow-summary-label">💳 כסף צפוי לפני המשכורת הבאה</div>
+          <div class="cashflow-summary-value" id="money-before-salary-value">₪0</div>
+        </div>
+        <div class="cashflow-summary-item">
+          <div class="cashflow-summary-label" id="daily-allowance-label">💸 אפשר להוציא עד המשכורת הבאה</div>
+          <div class="cashflow-summary-value" id="daily-allowance-value">₪0 ליום</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- תחזית יתרה עד המשכורת הבאה - רצף כרונולוגי של האירועים ואיך היתרה משתנה
+         אחרי כל אחד מהם, עד המשכורת הבאה (לא כולל). משתמשת באותם הנתונים והלוגיקה
+         של שלב 13C (getEventsInRange / findNextSalaryEvent) - לא מערכת נפרדת. -->
+    <section class="card form-card" id="balance-forecast-card">
+      <h2 class="form-title">📈 תחזית יתרה עד המשכורת הבאה</h2>
+
+      <!-- הרשימה הכרונולוגית הזו מתמלאת ע"י JavaScript (renderBalanceForecastSection) -->
+      <div class="cashflow-list" id="balance-forecast-list"></div>
+
+      <!-- המשכורת הבאה מוצגת כנקודת סיום נפרדת ובולטת - היא לא נכללת בחישוב עצמו -->
+      <div class="balance-forecast-salary-line" id="balance-forecast-salary-line"></div>
+
+      <!-- מוצג רק אם היתרה צפויה לרדת מתחת ל-0 באחד השלבים -->
+      <div class="balance-forecast-warning" id="balance-forecast-warning" style="display: none;"></div>
+
+      <div class="cashflow-summary">
+        <div class="cashflow-summary-item">
+          <div class="cashflow-summary-label">💰 יתרה צפויה לפני המשכורת הבאה</div>
+          <div class="cashflow-summary-value" id="balance-forecast-money-value">₪0</div>
+        </div>
+        <div class="cashflow-summary-item">
+          <div class="cashflow-summary-label">💳 ממוצע שניתן להוציא ליום</div>
+          <div class="cashflow-summary-value" id="balance-forecast-daily-value">₪0</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- גיבוי נתונים: ייצוא וייבוא של כל המידע כקובץ JSON -->
+<section class="card form-card">
+      <h2 class="form-title">💾 גיבוי נתונים</h2>
+
+      <p class="current-month">
+        אפשר לייצא את כל הנתונים שלך לקובץ, ולייבא אותם בחזרה בהמשך (למשל אם עוברת מחשב, או בטעות מחקת משהו).
+      </p>
+
+      <button type="button" id="export-button" class="secondary-button" style="margin-inline-end: 8px;">
+        ⬇️ ייצוא נתונים
+      </button>
+      <button type="button" id="import-button" class="secondary-button">
+        ⬆️ ייבוא נתונים
+      </button>
+
+      <!-- אינפוט הקובץ הזה מוסתר - הכפתור "ייבוא נתונים" שמעליו פותח אותו בשבילנו -->
+      <input type="file" id="import-file-input" accept=".json,application/json" style="display: none;">
+    </section>
+
+  </main>
+
+  <!-- מודאל (חלון קופץ) להוספה או עריכה של אירוע בלוח השנה הפיננסי -->
+  <div class="modal-overlay" id="event-modal-overlay" style="display: none;">
+    <div class="modal-box">
+      <h3 id="event-modal-title">הוספת אירוע</h3>
+
+      <form id="event-form">
+        <div class="form-row">
+          <label for="event-type-input">סוג אירוע</label>
+          <select id="event-type-input">
+            <option value="salary">💰 משכורת</option>
+            <option value="extraIncome">💵 הכנסה נוספת</option>
+            <option value="rent">🏠 שכר דירה</option>
+            <option value="bills">💡 חשבון / חשבונות</option>
+            <option value="savings">💾 חיסכון</option>
+            <option value="otherExpense">💳 הוצאה אחרת</option>
+          </select>
+        </div>
+
+        <div class="form-row">
+          <label for="event-name-input">שם / תיאור</label>
+          <input type="text" id="event-name-input" placeholder="לדוגמה: משכורת חודשית">
+        </div>
+
+        <div class="form-row">
+          <label for="event-amount-input">סכום</label>
+          <input type="number" id="event-amount-input" min="0" placeholder="0">
+        </div>
+
+        <div class="form-row">
+          <label for="event-day-input">יום בחודש</label>
+          <input type="number" id="event-day-input" min="1" max="31">
+        </div>
+
+        <div class="form-row form-row-checkbox">
+          <label><input type="checkbox" id="event-recurring-input"> חוזר כל חודש</label>
+        </div>
+
+        <div class="modal-actions">
+          <button type="submit">שמור</button>
+          <button type="button" id="event-delete-button" class="secondary-button" style="display: none;">
+            מחק אירוע
+          </button>
+          <button type="button" id="event-cancel-button" class="secondary-button">ביטול</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>

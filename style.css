@@ -1,0 +1,1095 @@
+/* ===== משתני עיצוב (CSS Variables) =====
+   כל הצבעים והמידות המרכזיות מוגדרות פה במקום אחד.
+   היתרון: אם בעתיד תרצי לשנות את הצבע הראשי של האתר, משנים שורה אחת כאן
+   במקום לחפש את הצבע הזה בעשרות מקומות בקובץ. */
+:root {
+  --color-bg: #f4f5fb;
+  --color-card: #ffffff;
+  --color-text: #1f2430;
+  --color-text-muted: #6b7280;
+  --color-border: #e9eaf0;
+
+  --color-primary: #4f46e5;
+  --color-primary-dark: #4338ca;
+
+  --color-income: #16a34a;
+  --color-expenses: #dc2626;
+  --color-savings: #2563eb;
+
+  --radius-lg: 18px;
+  --radius-md: 12px;
+
+  --shadow-card: 0 1px 3px rgba(15, 23, 42, 0.06);
+  --shadow-card-hover: 0 6px 20px rgba(15, 23, 42, 0.08);
+}
+
+/* איפוס בסיסי - כדי שכל הדפדפנים יתחילו מאותה נקודה */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: "Rubik", -apple-system, "Segoe UI", Arial, sans-serif;
+  background-color: var(--color-bg);
+  color: var(--color-text);
+  line-height: 1.5;
+}
+
+.app-header {
+  background-color: var(--color-card);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.app-header-inner {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 22px 24px;
+}
+
+.app-header h1 {
+  font-size: 22px;
+  font-weight: 700;
+}
+
+.app-subtitle {
+  font-size: 13px;
+  color: var(--color-text-muted);
+  margin-top: 4px;
+}
+
+.app-main {
+  max-width: 900px;
+  margin: 32px auto;
+  padding: 0 24px 48px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* ה-Dashboard: רשת (grid) שמסדרת את הכרטיסים בשורה, ועוברת אוטומטית לעמודה אחת במובייל */
+.dashboard {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 16px;
+}
+
+.card {
+  background-color: var(--color-card);
+  border-radius: var(--radius-lg);
+  padding: 24px;
+  box-shadow: var(--shadow-card);
+  transition: box-shadow 0.2s ease;
+}
+
+.card:hover {
+  box-shadow: var(--shadow-card-hover);
+}
+
+.dashboard .card {
+  text-align: center;
+}
+
+.card-icon {
+  font-size: 28px;
+  margin-bottom: 8px;
+}
+
+.card-label {
+  font-size: 14px;
+  color: var(--color-text-muted);
+  margin-bottom: 6px;
+}
+
+.card-value {
+  font-size: 26px;
+  font-weight: 700;
+}
+
+.card-breakdown {
+  font-size: 12px;
+  color: #9ca3af;
+  margin-top: 6px;
+}
+
+/* צבע קטן שמייחד כל כרטיס לפי הסוג שלו */
+.card-income .card-value {
+  color: var(--color-income);
+}
+
+.card-expenses .card-value {
+  color: var(--color-expenses);
+}
+
+.card-savings .card-value {
+  color: var(--color-savings);
+}
+
+.card-remaining .card-value {
+  color: var(--color-text);
+}
+
+/* כרטיס "מותר להוציא היום" - כשחורגים מהתקציב, הכרטיס מקבל את המחלקה over-budget
+   (בדיוק כמו שורה חורגת בטבלת התקציבים) והמספר מתאדם */
+.card-spending-limit.over-budget .card-value {
+  color: var(--color-expenses);
+}
+
+/* כרטיס "יתרה נוכחית" - שדה קלט קטן וכפתור שמירה, בתוך הכרטיס עצמו */
+.balance-edit-row {
+  display: flex;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.balance-edit-row input {
+  width: 100%;
+  min-width: 0;
+  padding: 8px 10px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  font-size: 14px;
+  font-family: inherit;
+  text-align: center;
+}
+
+.balance-edit-row input:focus {
+  outline: none;
+  border-color: var(--color-primary);
+}
+
+.balance-edit-row .secondary-button {
+  padding: 8px 12px;
+  font-size: 13px;
+  margin-bottom: 0;
+  white-space: nowrap;
+}
+
+/* תחזית יתרה עד המשכורת הבאה - שורת המשכורת הבאה (ירוקה, בולטת) ואזהרת חוסר (אדומה) */
+.balance-forecast-salary-line {
+  margin: 14px 0;
+  padding: 10px 14px;
+  background-color: #ecfdf5;
+  color: var(--color-income);
+  border-radius: var(--radius-md);
+  font-weight: 600;
+  font-size: 14px;
+  text-align: center;
+}
+
+.balance-forecast-warning {
+  margin: 14px 0;
+  padding: 10px 14px;
+  background-color: #fef2f2;
+  color: #b91c1c;
+  border-radius: var(--radius-md);
+  font-weight: 600;
+  font-size: 13px;
+}
+
+/* מרכז שליטה חודשי - שורות ההתקדמות (משתמשות ב-.progress-bar-track/.progress-bar-fill
+   הקיימים ממטרות החיסכון) וכרטיסיית קצב ההוצאות */
+.month-progress-row {
+  margin-top: 16px;
+}
+
+.month-progress-label {
+  font-size: 13px;
+  color: var(--color-text-muted);
+  margin-bottom: 6px;
+}
+
+/* גרסה אדומה ל-progress-bar-fill הקיים - נוספת רק כשחורגים מהתקציב, לא משנה מטרות חיסכון */
+.progress-bar-fill.fill-danger {
+  background-color: var(--color-expenses);
+}
+
+.month-pace-line {
+  margin-top: 14px;
+  padding: 10px 14px;
+  border-radius: var(--radius-md);
+  font-size: 13px;
+  font-weight: 600;
+  text-align: center;
+}
+
+.month-pace-line.pace-good {
+  background-color: #ecfdf5;
+  color: var(--color-income);
+}
+
+.month-pace-line.pace-warning {
+  background-color: #fef2f2;
+  color: #b91c1c;
+}
+
+.month-pace-line.pace-steady {
+  background-color: #eff6ff;
+  color: var(--color-savings);
+}
+
+.month-pace-line.pace-neutral {
+  background-color: var(--color-bg);
+  color: var(--color-text-muted);
+}
+
+/* ===== גרפים ויזואליים להוצאות (שלב 15) ===== */
+
+/* מיכל שני כרטיסי הגרפים - אחד ליד השני במסך רחב, אחד מתחת לשני במסך צר */
+.charts-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20px;
+}
+
+.charts-row-item {
+  flex: 1 1 320px;
+  min-width: 280px;
+}
+
+/* גרף "לאן הכסף הולך" - דונאט + רשימת מקרא */
+.chart-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 20px;
+}
+
+.donut-chart-wrapper {
+  flex: 0 0 auto;
+  width: 150px;
+}
+
+.donut-chart {
+  width: 100%;
+  height: auto;
+}
+
+.donut-chart-bg {
+  fill: none;
+  stroke: var(--color-bg);
+  stroke-width: 3;
+}
+
+.donut-chart-slice {
+  fill: none;
+  stroke-width: 3;
+}
+
+.legend-list {
+  flex: 1 1 200px;
+  min-width: 180px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.legend-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+}
+
+.legend-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.legend-text {
+  flex: 1;
+}
+
+.legend-amount {
+  color: var(--color-text-muted);
+  white-space: nowrap;
+  font-size: 12px;
+}
+
+/* גרף "תקציב מול הוצאה בפועל" - שורה לכל קטגוריה, עם progress-bar-track/fill הקיימים */
+.budget-compare-row {
+  margin-bottom: 16px;
+}
+
+.budget-compare-row:last-child {
+  margin-bottom: 0;
+}
+
+.budget-compare-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 10px;
+  font-size: 13px;
+  margin-bottom: 6px;
+  flex-wrap: wrap;
+}
+
+.budget-compare-amounts {
+  color: var(--color-text-muted);
+  white-space: nowrap;
+}
+
+.budget-compare-over-note {
+  font-size: 12px;
+  color: #b91c1c;
+  margin-top: 4px;
+}
+
+/* ===== מצב חיסכון חכם (שלב 16) - בתוך כרטיס מטרת חיסכון קיים ===== */
+.goal-pace-section {
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid var(--color-border);
+}
+
+.goal-pace-title {
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+.goal-pace-line {
+  font-size: 13px;
+  color: #374151;
+  margin-bottom: 4px;
+}
+
+/* "צריך להגדיל מעט" - מצב אמצעי בין ירוק לאדום. זה זוג הצבעים היחיד שלא היה קיים
+   ב-:root, כי צריך שלושה מצבים ברורים (ירוק/צהוב/אדום) ולא היה צהוב מוגדר קודם */
+.month-pace-line.pace-caution {
+  background-color: #fffbeb;
+  color: #b45309;
+}
+
+/* כפתור "מה יקרה אם אחסוך" ואזור הסימולציה - נפתח/נסגר בלחיצה, ולא משנה נתונים אמיתיים */
+.goal-sim-toggle-button {
+  margin-top: 12px;
+  width: 100%;
+}
+
+.goal-sim-reveal {
+  margin-top: 12px;
+}
+
+.goal-sim-presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.goal-sim-amount-button {
+  margin-bottom: 0;
+  padding: 8px 14px;
+  font-size: 13px;
+}
+
+.goal-sim-custom-row {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.goal-sim-custom-input {
+  flex: 1;
+  min-width: 0;
+  padding: 8px 10px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  font-size: 14px;
+  font-family: inherit;
+}
+
+.goal-sim-custom-input:focus {
+  outline: none;
+  border-color: var(--color-primary);
+}
+
+.goal-sim-custom-button {
+  margin-bottom: 0;
+  padding: 8px 14px;
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+.goal-sim-result {
+  font-size: 13px;
+  color: #374151;
+  background-color: var(--color-bg);
+  border-radius: var(--radius-md);
+  padding: 10px 12px;
+  min-height: 20px;
+}
+
+/* כרטיסי הטפסים */
+.form-title {
+  font-size: 17px;
+  font-weight: 600;
+  margin-bottom: 18px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.expenses-subtitle {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  margin: 18px 0 10px;
+}
+
+.expenses-subtitle:first-of-type {
+  margin-top: 0;
+}
+
+/* רשת דו-טורית לשדות ההוצאות, שעוברת לטור אחד במסך צר */
+.expenses-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 12px 16px;
+  margin-bottom: 8px;
+}
+
+.form-row {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 14px;
+}
+
+.form-row label {
+  font-size: 14px;
+  color: var(--color-text-muted);
+}
+
+.form-row input {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 10px;
+  font-size: 16px;
+  font-family: inherit;
+  transition: border-color 0.15s ease;
+}
+
+.form-row input:focus {
+  outline: none;
+  border-color: var(--color-primary);
+}
+
+/* select (כמו סוג האירוע בלוח השנה) לא היה מעוצב בכלל - מקבל כאן את אותו עיצוב
+   בדיוק כמו שדות input, כדי שיהיה עקבי ושה-font-size יהיה 16px (מונע zoom אוטומטי באייפון) */
+.form-row select {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 10px;
+  font-size: 16px;
+  font-family: inherit;
+  background-color: var(--color-card);
+  color: var(--color-text);
+  transition: border-color 0.15s ease;
+}
+
+.form-row select:focus {
+  outline: none;
+  border-color: var(--color-primary);
+}
+
+.form-card button {
+  background-color: var(--color-primary);
+  color: #ffffff;
+  border: none;
+  padding: 12px 20px;
+  border-radius: 10px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  margin-top: 8px;
+  transition: background-color 0.15s ease;
+}
+
+.form-card button:hover {
+  background-color: var(--color-primary-dark);
+}
+
+/* טבלת השוואת תקציב / היסטוריה (מתוכנן / בפועל / נשאר, או חודש / הכנסה / הוצאות...) */
+.budget-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 20px;
+  font-size: 14px;
+}
+
+.budget-table th {
+  text-align: right;
+  color: var(--color-text-muted);
+  font-weight: 600;
+  font-size: 13px;
+  padding: 8px 6px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.budget-table td {
+  padding: 10px 6px;
+  border-bottom: 1px solid #f1f2f5;
+}
+
+/* שורה שחצתה את התקציב - רקע אדמדם קליל שמושך את העין */
+.budget-table tr.over-budget td {
+  background-color: #fef2f2;
+  color: #b91c1c;
+  font-weight: 600;
+}
+
+/* רשימת מטרות החיסכון */
+.goals-list {
+  margin-top: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.goal-card {
+  background-color: var(--color-bg);
+  border-radius: var(--radius-md);
+  padding: 16px;
+}
+
+.goal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.goal-name {
+  font-weight: 600;
+  font-size: 15px;
+  flex: 1;
+  min-width: 0;
+  word-break: break-word;
+}
+
+.goal-delete {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 15px;
+  color: #9ca3af;
+  padding: 4px;
+  flex-shrink: 0;
+  transition: color 0.15s ease;
+}
+
+.goal-delete:hover {
+  color: var(--color-expenses);
+}
+
+/* כפתור מחיקת שורה בטבלת ההיסטוריה - אותו סטייל כמו מחיקת מטרה */
+.history-delete {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 15px;
+  color: #9ca3af;
+  padding: 2px 6px;
+  transition: color 0.15s ease;
+}
+
+.history-delete:hover {
+  color: var(--color-expenses);
+}
+
+.progress-bar-track {
+  background-color: #e5e7eb;
+  border-radius: 8px;
+  height: 10px;
+  overflow: hidden;
+  margin-bottom: 10px;
+}
+
+.progress-bar-fill {
+  background-color: var(--color-income);
+  height: 100%;
+  border-radius: 8px;
+  transition: width 0.3s ease;
+}
+
+.goal-stats {
+  display: flex;
+  justify-content: space-between;
+  font-size: 13px;
+  color: #374151;
+  margin-bottom: 4px;
+}
+
+.goal-eta {
+  font-size: 12px;
+  color: var(--color-text-muted);
+}
+
+/* אזור ההיסטוריה החודשית */
+.current-month {
+  font-size: 14px;
+  color: var(--color-text-muted);
+  margin-bottom: 12px;
+}
+
+.secondary-button {
+  background-color: var(--color-card);
+  color: var(--color-primary);
+  border: 1px solid var(--color-primary);
+  padding: 10px 16px;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  margin-bottom: 8px;
+  transition: background-color 0.15s ease;
+}
+
+.secondary-button:hover {
+  background-color: #eef2ff;
+}
+
+/* ===== לוח שנה פיננסי ===== */
+.calendar-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+}
+
+.calendar-title {
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+}
+
+.calendar-weekday {
+  text-align: center;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  padding: 6px 0;
+}
+
+.calendar-day {
+  min-height: 78px;
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  padding: 6px;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+  overflow: hidden;
+}
+
+.calendar-day:hover {
+  background-color: var(--color-bg);
+}
+
+.calendar-day.today {
+  border-color: var(--color-primary);
+  border-width: 2px;
+}
+
+.calendar-day-empty {
+  background: none;
+  border-color: transparent;
+  cursor: default;
+}
+
+.calendar-day-empty:hover {
+  background: none;
+}
+
+.calendar-day-number {
+  font-size: 12px;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.calendar-event {
+  font-size: 10.5px;
+  border-radius: 5px;
+  padding: 1px 4px;
+  margin-bottom: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: pointer;
+}
+
+.calendar-event.income {
+  background-color: #ecfdf5;
+  color: var(--color-income);
+}
+
+.calendar-event.expense {
+  background-color: #fef2f2;
+  color: var(--color-expenses);
+}
+
+.calendar-more {
+  font-size: 10px;
+  color: var(--color-text-muted);
+}
+
+/* המודאל (חלון קופץ) להוספה/עריכה של אירוע */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(15, 23, 42, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  padding: 16px;
+}
+
+.modal-box {
+  background-color: var(--color-card);
+  border-radius: var(--radius-lg);
+  padding: 24px;
+  max-width: 360px;
+  width: 100%;
+  box-shadow: var(--shadow-card-hover);
+}
+
+.modal-box h3 {
+  margin-bottom: 16px;
+  font-size: 17px;
+}
+
+.form-row-checkbox {
+  flex-direction: row;
+  align-items: center;
+}
+
+.form-row-checkbox label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--color-text);
+  font-size: 14px;
+}
+
+.modal-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+  flex-wrap: wrap;
+}
+
+/* כפתור "שמור" במודאל האירוע היה בלי class ובלי עיצוב כלל (גם ב-desktop, לא רק במובייל) -
+   נותנת לו כאן בדיוק את אותה שפה עיצובית כמו .form-card button, כדי שיהיה עקבי ונוח למגע */
+.modal-actions button:not(.secondary-button) {
+  background-color: var(--color-primary);
+  color: #ffffff;
+  border: none;
+  padding: 12px 20px;
+  border-radius: 10px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.modal-actions button:not(.secondary-button):hover {
+  background-color: var(--color-primary-dark);
+}
+
+/* ===== תזרים צפוי ===== */
+.cashflow-summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 12px;
+  margin: 16px 0 20px;
+}
+
+.cashflow-summary-item {
+  background-color: var(--color-bg);
+  border-radius: var(--radius-md);
+  padding: 14px;
+  text-align: center;
+}
+
+.cashflow-summary-label {
+  font-size: 13px;
+  color: var(--color-text-muted);
+  margin-bottom: 6px;
+}
+
+.cashflow-summary-value {
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.cashflow-summary-value.income {
+  color: var(--color-income);
+}
+
+.cashflow-summary-value.expense {
+  color: var(--color-expenses);
+}
+
+.cashflow-summary-value.savings {
+  color: var(--color-savings);
+}
+
+.cashflow-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.cashflow-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  background-color: var(--color-bg);
+  border-radius: var(--radius-md);
+  font-size: 13px;
+  flex-wrap: wrap;
+}
+
+.cashflow-row-main {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.cashflow-date {
+  color: var(--color-text-muted);
+  min-width: 40px;
+}
+
+.cashflow-amount {
+  font-weight: 600;
+}
+
+.cashflow-amount.income {
+  color: var(--color-income);
+}
+
+.cashflow-amount.expense {
+  color: var(--color-expenses);
+}
+
+.cashflow-cumulative {
+  color: var(--color-text-muted);
+  font-size: 12px;
+}
+
+.cashflow-empty {
+  text-align: center;
+  color: var(--color-text-muted);
+  font-size: 14px;
+  padding: 12px 0;
+}
+
+/* ===== Mobile UI (שלב 16) =====
+   הכל בבלוק הזה הוא תוספת עיצובית בלבד להתאמת האפליקציה למסכי טלפון/טאבלט.
+   מעל 480px (ולטבלאות - מעל 640px) שום דבר לא משתנה, ה-desktop נשאר מדויק כמו שהיה.
+   כל השינויים כאן הם CSS בלבד (גודל/ריווח/פריסה) - בלי לגעת בלוגיקה, בנתונים, או ב-JS. */
+
+/* --- טלפון וטאבלט קטן (עד 480px) --- */
+@media (max-width: 480px) {
+
+  .app-header-inner {
+    padding: 16px;
+  }
+
+  .app-header h1 {
+    font-size: clamp(18px, 5.5vw, 22px);
+  }
+
+  .app-main {
+    margin: 20px auto;
+    padding: 0 16px 40px;
+    gap: 16px;
+  }
+
+  .card {
+    padding: 18px;
+  }
+
+  .card-value {
+    font-size: clamp(20px, 6vw, 26px);
+  }
+
+  /* טפסים - ריפוד מעט גדול יותר לנוחות מגע */
+  .form-row input,
+  .form-row select {
+    padding: 12px 14px;
+  }
+
+  .balance-edit-row input,
+  .goal-sim-custom-input {
+    font-size: 16px;
+  }
+
+  /* כפתורים - שטח לחיצה נוח יותר למגע (כ-44px) */
+  .secondary-button,
+  .form-card button,
+  .modal-actions button,
+  .goal-sim-toggle-button,
+  .goal-sim-amount-button,
+  .goal-sim-custom-button {
+    min-height: 44px;
+  }
+
+  .goal-delete,
+  .history-delete {
+    min-width: 40px;
+    min-height: 40px;
+    font-size: 17px;
+  }
+
+  .form-row-checkbox label {
+    padding: 8px 0;
+  }
+
+  .form-row-checkbox input[type="checkbox"] {
+    width: 20px;
+    height: 20px;
+  }
+
+  /* לוח שנה - מקטינים ריווחים וגדלי טקסט כדי שכל 7 העמודות ייכנסו בנוחות לרוחב המסך,
+     בלי לשנות שום דבר בלוגיקה (collectEventsForDay/renderCalendar לא נגעו בהם) */
+  .calendar-grid {
+    gap: 3px;
+  }
+
+  .calendar-day {
+    min-height: 52px;
+    padding: 4px;
+  }
+
+  .calendar-day-number {
+    font-size: 11px;
+  }
+
+  .calendar-event {
+    font-size: 9.5px;
+    padding: 1px 3px;
+  }
+
+  .calendar-more {
+    font-size: 9px;
+  }
+
+  .calendar-header .secondary-button {
+    padding: 10px 12px;
+    font-size: 13px;
+  }
+
+  /* גרף הדונאט - קצת יותר קטן כדי להשאיר מקום נוח למקרא בצידו */
+  .donut-chart-wrapper {
+    width: 120px;
+  }
+
+  .chart-row {
+    gap: 14px;
+  }
+
+  .modal-box {
+    padding: 18px;
+  }
+}
+
+/* --- טבלאות (תקציב מול בפועל, היסטוריה) - עוברות לרשימת "כרטיסים" אנכית במקום
+   טבלה רחבה, כדי שלא תהיה גלילה אופקית והמידע יישאר קריא. תוויות השדות (מתוכנן/
+   בפועל/נשאר וכו') הן טקסט CSS קבוע (::before) כי סדר וכותרות העמודות ידועים מראש
+   ולא תלויים בנתונים - לא נדרש שום שינוי ב-HTML או ב-JavaScript בשביל זה. --- */
+@media (max-width: 640px) {
+
+  .budget-table thead {
+    display: none;
+  }
+
+  .budget-table,
+  .budget-table tbody,
+  .budget-table tr,
+  .budget-table td {
+    display: block;
+    width: 100%;
+  }
+
+  .budget-table {
+    margin-top: 16px;
+  }
+
+  .budget-table tr {
+    background-color: var(--color-bg);
+    border-radius: var(--radius-md);
+    padding: 12px 14px;
+    margin-bottom: 10px;
+  }
+
+  .budget-table tr:last-child {
+    margin-bottom: 0;
+  }
+
+  .budget-table tr.over-budget {
+    background-color: #fef2f2;
+    color: #b91c1c;
+  }
+
+  .budget-table td {
+    border-bottom: none;
+    padding: 4px 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .budget-table tr.over-budget td {
+    background-color: transparent;
+  }
+
+  /* התא הראשון (שם הקטגוריה / החודש) משמש ככותרת הכרטיס */
+  .budget-table td:first-child {
+    display: block;
+    font-weight: 600;
+    font-size: 14px;
+    padding-bottom: 8px;
+    margin-bottom: 6px;
+    border-bottom: 1px solid var(--color-border);
+  }
+
+  #budget-table-body td:nth-child(2)::before { content: "מתוכנן"; color: var(--color-text-muted); font-size: 12px; }
+  #budget-table-body td:nth-child(3)::before { content: "בפועל"; color: var(--color-text-muted); font-size: 12px; }
+  #budget-table-body td:nth-child(4)::before { content: "נשאר"; color: var(--color-text-muted); font-size: 12px; }
+
+  #history-table-body td:nth-child(2)::before { content: "הכנסה"; color: var(--color-text-muted); font-size: 12px; }
+  #history-table-body td:nth-child(3)::before { content: "הוצאות"; color: var(--color-text-muted); font-size: 12px; }
+  #history-table-body td:nth-child(4)::before { content: "חיסכון"; color: var(--color-text-muted); font-size: 12px; }
+  #history-table-body td:nth-child(5)::before { content: "נשאר"; color: var(--color-text-muted); font-size: 12px; }
+
+  /* תא כפתור המחיקה בהיסטוריה - בלי תווית, מיושר לקצה ונוח ללחיצה */
+  #history-table-body td:nth-child(6) {
+    justify-content: flex-end;
+    padding-top: 8px;
+  }
+}
