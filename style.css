@@ -652,6 +652,46 @@ body {
   color: var(--color-income);
 }
 
+/* הוצאות מהירות - אותו כרטיס/שורה כמו מקורות הכנסה (.goal-card/.goal-header/.goal-name/
+   .income-source-edit/.goal-delete משותפים), רק עם כפתור "+" נוסף ובולט לפני העריכה/מחיקה,
+   ושורת פרטים עם סכום וקטגוריה מתחת לשם */
+.quick-expense-actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex-shrink: 0;
+}
+
+.quick-expense-add-button {
+  background-color: var(--color-primary);
+  color: #ffffff;
+  border: none;
+  border-radius: 8px;
+  width: 30px;
+  height: 30px;
+  font-size: 17px;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background-color 0.15s ease;
+}
+
+.quick-expense-add-button:hover {
+  background-color: var(--color-primary-dark);
+}
+
+.quick-expense-details {
+  font-size: 13px;
+  color: var(--color-text-muted);
+  margin-top: 2px;
+}
+
+.quick-expense-amount {
+  font-weight: 600;
+  color: var(--color-expenses);
+}
+
 .progress-bar-track {
   background-color: #e5e7eb;
   border-radius: 8px;
@@ -1009,6 +1049,12 @@ body {
     min-width: 40px;
     min-height: 40px;
     font-size: 17px;
+  }
+
+  .quick-expense-add-button {
+    width: 40px;
+    height: 40px;
+    font-size: 19px;
   }
 
   .form-row-checkbox label {

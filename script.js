@@ -48,6 +48,10 @@ let budgetData = {
   calendarEvents: [],
   // יתרה נוכחית - מוזנת ידנית ע"י המשתמשת, לא מחושבת אוטומטית מהכנסות/הוצאות
   currentBalance: 0,
+  // הוצאות מהירות - קיצורי דרך אישיים (כמו "קפה - 15₪") שמוסיפים הוצאה רגילה בלחיצה אחת.
+  // כל אחת היא { id, name, amount, type: "fixed"|"variable", category: <key מ-fixedFields/variableFields> }.
+  // זה לא מערכת הוצאות נפרדת - לחיצה על "+" רק מוסיפה את הסכום לקטגוריה הקיימת ב-expensesFixed/expensesVariable.
+  quickExpenses: [],
 };
 
 // שמות החודשים בעברית, לפי המספר שמחזיר new Date().getMonth() (0 = ינואר)
@@ -181,6 +185,9 @@ function ensureBackwardCompatibleFields() {
   }
   if (typeof budgetData.currentBalance !== "number") {
     budgetData.currentBalance = 0;
+  }
+  if (!Array.isArray(budgetData.quickExpenses)) {
+    budgetData.quickExpenses = [];
   }
   // אם יש שורות היסטוריה ישנות בלי id (מלפני שהוספנו מחיקה) - נוסיף להן אחד
   budgetData.history.forEach((entry, index) => {
@@ -1242,6 +1249,39 @@ function sanitizeImportedCalendarEvents(events) {
   return { ok: true, value: sanitized };
 }
 
+// בודקת ומנקה את ההוצאות המהירות המיובאות - שם לא ריק, סכום לא-שלילי, type תקין ("fixed"/
+// "variable"), category שקיימת בפועל ברשימת fixedFields/variableFields המתאימה, ו-id מספרי
+// וייחודי לכל הוצאה מהירה (בניגוד לשאר הרשימות המיובאות באפליקציה, כאן דוחות את כל הקובץ
+// אם ה-id חסר/לא מספר/כפול, ולא ממציאות id חדש - זה מה שהתבקש עבור הפיצ'ר הזה במפורש).
+function sanitizeImportedQuickExpenses(quickExpenses) {
+  if (!Array.isArray(quickExpenses)) {
+    return { ok: false };
+  }
+  const seenIds = new Set();
+  const sanitized = [];
+  for (const qe of quickExpenses) {
+    if (!qe || typeof qe !== "object" || typeof qe.name !== "string" || !qe.name.trim()) {
+      return { ok: false };
+    }
+    if (!isValidNonNegativeNumber(qe.amount)) {
+      return { ok: false };
+    }
+    if (qe.type !== "fixed" && qe.type !== "variable") {
+      return { ok: false };
+    }
+    const validKeys = (qe.type === "fixed" ? fixedFields : variableFields).map((f) => f.key);
+    if (!validKeys.includes(qe.category)) {
+      return { ok: false };
+    }
+    if (typeof qe.id !== "number" || !isFinite(qe.id) || seenIds.has(qe.id)) {
+      return { ok: false };
+    }
+    seenIds.add(qe.id);
+    sanitized.push({ id: qe.id, name: qe.name, amount: qe.amount, type: qe.type, category: qe.category });
+  }
+  return { ok: true, value: sanitized };
+}
+
 // הפונקציה הראשית: בודקת קובץ שיובא לעומק, ומחזירה גרסה נקייה ובטוחה שלו אם הוא תקין.
 // { ok: true, value: <budgetData נקי> } או { ok: false } אם הקובץ פגום באופן שלא ניתן לתקן בבטחה.
 function sanitizeImportedBudgetData(data) {
@@ -1307,6 +1347,15 @@ function sanitizeImportedBudgetData(data) {
     currentBalance = data.currentBalance;
   }
 
+  // quickExpenses נוסף לאפליקציה מאוחר יותר - גיבוי ישן לגיטימי עשוי שלא לכלול אותו בכלל
+  let quickExpenses = { ok: true, value: [] };
+  if (data.quickExpenses !== undefined) {
+    quickExpenses = sanitizeImportedQuickExpenses(data.quickExpenses);
+    if (!quickExpenses.ok) {
+      return { ok: false };
+    }
+  }
+
   return {
     ok: true,
     value: {
@@ -1318,6 +1367,7 @@ function sanitizeImportedBudgetData(data) {
       history: history.value,
       calendarEvents: calendarEvents.value,
       currentBalance: currentBalance,
+      quickExpenses: quickExpenses.value,
     },
   };
 }
@@ -1391,9 +1441,10 @@ document.getElementById("import-file-input").addEventListener("change", function
     ensureBackwardCompatibleFields(); // ליתר ביטחון, כמו בכל טעינת נתונים אחרת
     saveData();
 
-    // מרעננות את כל התצוגה - הטפסים, הדשבורד, מקורות ההכנסה, המטרות, ההיסטוריה, לוח השנה והיתרה - עם הנתונים שיובאו
+    // מרעננות את כל התצוגה - הטפסים, הדשבורד, מקורות ההכנסה, הוצאות מהירות, המטרות, ההיסטוריה, לוח השנה והיתרה - עם הנתונים שיובאו
     fillAllInputs();
     renderIncomeSources();
+    renderQuickExpenses();
     renderSavingsGoals();
     renderHistoryTable();
     renderDashboard();
@@ -1546,6 +1597,206 @@ document.getElementById("income-source-delete-button").addEventListener("click",
   closeIncomeSourceModal();
   renderIncomeSources();
   renderDashboard();
+});
+
+// ===== הוצאות מהירות =====
+// קיצורי דרך אישיים ({ id, name, amount, type, category }) שמוסיפים הוצאה רגילה בלחיצה אחת.
+// חשוב: זו לא מערכת הוצאות מקבילה - "type"+"category" מצביעים על קטגוריה קיימת ממש
+// ב-fixedFields/variableFields, ולחיצה על "+" רק מוסיפה את amount לקטגוריה הזו
+// ב-budgetData.expensesFixed/expensesVariable (ר' applyQuickExpense), בדיוק כאילו הוקלד
+// ידנית בטופס "עדכון הוצאות חודשיות" ונשמר. לכן זה מופיע אוטומטית בכל מקום שכבר קורא
+// מהשדות האלה (Dashboard, breakdown, גרפים, תקציבים, סיכום חודשי, היסטוריה בסגירת חודש).
+
+// ממלאת את select הקטגוריה במודאל מתוך fixedFields/variableFields הקיימות - אין כאן
+// רשימת קטגוריות חדשה, רק שימוש ברשימה הקיימת. נקראת פעם אחת בטעינת הדף.
+function populateQuickExpenseCategoryOptions() {
+  const select = document.getElementById("quick-expense-category-input");
+  let html = '<optgroup label="הוצאות קבועות">';
+  fixedFields.forEach((field) => {
+    html += '<option value="fixed:' + field.key + '">' + field.icon + " " + field.label + "</option>";
+  });
+  html += '</optgroup><optgroup label="הוצאות משתנות">';
+  variableFields.forEach((field) => {
+    html += '<option value="variable:' + field.key + '">' + field.icon + " " + field.label + "</option>";
+  });
+  html += "</optgroup>";
+  select.innerHTML = html;
+}
+
+// מחזירה את התווית העברית של קטגוריה, לפי type+category - קריאה בלבד מ-fixedFields/variableFields
+function getQuickExpenseCategoryLabel(type, category) {
+  const list = type === "fixed" ? fixedFields : variableFields;
+  const field = list.find((f) => f.key === category);
+  return field ? field.icon + " " + field.label : category;
+}
+
+// בונה מחדש את רשימת ההוצאות המהירות, לפי budgetData.quickExpenses
+function renderQuickExpenses() {
+  const container = document.getElementById("quick-expenses-list");
+  container.innerHTML = "";
+
+  budgetData.quickExpenses.forEach((qe) => {
+    const card = document.createElement("div");
+    card.className = "goal-card";
+    card.innerHTML =
+      '<div class="goal-header">' +
+      '<span class="goal-name">' + qe.name + "</span>" +
+      '<span class="quick-expense-actions">' +
+      '<button type="button" class="quick-expense-add-button" data-id="' + qe.id + '" aria-label="הוסף הוצאה: ' + qe.name + '">+</button>' +
+      '<button type="button" class="income-source-edit" data-id="' + qe.id + '" aria-label="ערוך הוצאה מהירה">✏️</button>' +
+      '<button type="button" class="goal-delete" data-id="' + qe.id + '" aria-label="מחק הוצאה מהירה">🗑️</button>' +
+      "</span>" +
+      "</div>" +
+      '<div class="quick-expense-details">' +
+      '<span class="quick-expense-amount">' + formatMoney(qe.amount) + "</span> · " +
+      getQuickExpenseCategoryLabel(qe.type, qe.category) +
+      "</div>";
+    container.appendChild(card);
+  });
+}
+
+// כשלוחצים "+" על הוצאה מהירה: מוסיפה את הסכום שלה לקטגוריה המתאימה ב-expensesFixed/
+// expensesVariable הקיימים (בדיוק כמו עדכון ידני של הטופס), עם תאריך "עכשיו" באופן טבעי -
+// כי אלה שדות "החודש הנוכחי" בלבד, בלי שדה תאריך נפרד (בהתאם למבנה הקיים של האפליקציה).
+// לא נוגעת ב-quickExpenses עצמה - עריכה עתידית של הקיצור לא משנה הוצאות שכבר נוצרו כך.
+function applyQuickExpense(quickExpenseId) {
+  const quickExpense = budgetData.quickExpenses.find((qe) => qe.id === quickExpenseId);
+  if (!quickExpense) {
+    return;
+  }
+
+  if (quickExpense.type === "fixed") {
+    budgetData.expensesFixed[quickExpense.category] += quickExpense.amount;
+  } else {
+    budgetData.expensesVariable[quickExpense.category] += quickExpense.amount;
+  }
+
+  saveData();
+  fillAllInputs(); // מרעננת את שדות טופס ההוצאות, כדי שלא יישארו עם ערך ישן ויידרסו בטעות
+  renderDashboard();
+}
+
+// כשעורכים הוצאה מהירה קיימת, שומרת כאן את ה-id שלה. null = מוספות הוצאה מהירה חדשה
+let editingQuickExpenseId = null;
+
+function openAddQuickExpenseModal() {
+  editingQuickExpenseId = null;
+
+  document.getElementById("quick-expense-modal-title").textContent = "הוספת הוצאה מהירה";
+  document.getElementById("quick-expense-name-input").value = "";
+  document.getElementById("quick-expense-amount-input").value = "";
+  document.getElementById("quick-expense-category-input").selectedIndex = 0;
+  document.getElementById("quick-expense-delete-button").style.display = "none";
+
+  document.getElementById("quick-expense-modal-overlay").style.display = "flex";
+}
+
+function openEditQuickExpenseModal(quickExpenseId) {
+  const quickExpense = budgetData.quickExpenses.find((qe) => qe.id === quickExpenseId);
+  if (!quickExpense) {
+    return;
+  }
+
+  editingQuickExpenseId = quickExpenseId;
+
+  document.getElementById("quick-expense-modal-title").textContent = "עריכת הוצאה מהירה";
+  document.getElementById("quick-expense-name-input").value = quickExpense.name;
+  document.getElementById("quick-expense-amount-input").value = quickExpense.amount;
+  document.getElementById("quick-expense-category-input").value = quickExpense.type + ":" + quickExpense.category;
+  document.getElementById("quick-expense-delete-button").style.display = "inline-block";
+
+  document.getElementById("quick-expense-modal-overlay").style.display = "flex";
+}
+
+function closeQuickExpenseModal() {
+  document.getElementById("quick-expense-modal-overlay").style.display = "none";
+  editingQuickExpenseId = null;
+}
+
+document.getElementById("add-quick-expense-button").addEventListener("click", openAddQuickExpenseModal);
+document.getElementById("quick-expense-cancel-button").addEventListener("click", closeQuickExpenseModal);
+
+// לחיצה על הרקע הכהה מסביב לחלון (ולא על החלון עצמו) סוגרת את המודאל
+document.getElementById("quick-expense-modal-overlay").addEventListener("click", function (event) {
+  if (event.target.id === "quick-expense-modal-overlay") {
+    closeQuickExpenseModal();
+  }
+});
+
+// מאזין לחיצה אחד על כל רשימת ההוצאות המהירות - תופס הוספה מהירה (+), עריכה, ומחיקה מהירה
+document.getElementById("quick-expenses-list").addEventListener("click", function (event) {
+  const addButton = event.target.closest(".quick-expense-add-button");
+  if (addButton) {
+    applyQuickExpense(Number(addButton.getAttribute("data-id")));
+    return;
+  }
+
+  const editButton = event.target.closest(".income-source-edit");
+  if (editButton) {
+    openEditQuickExpenseModal(Number(editButton.getAttribute("data-id")));
+    return;
+  }
+
+  const deleteButton = event.target.closest(".goal-delete");
+  if (deleteButton) {
+    const confirmed = confirm("למחוק את ההוצאה המהירה הזו? הוצאות שכבר נוצרו ממנה לא יימחקו. אי אפשר לשחזר את זה.");
+    if (!confirmed) {
+      return;
+    }
+    const idToDelete = Number(deleteButton.getAttribute("data-id"));
+    budgetData.quickExpenses = budgetData.quickExpenses.filter((qe) => qe.id !== idToDelete);
+    saveData();
+    renderQuickExpenses();
+  }
+});
+
+// כשלוחצים "שמור" בטופס ההוצאה המהירה (גם בהוספה וגם בעריכה):
+document.getElementById("quick-expense-form").addEventListener("submit", function (event) {
+  event.preventDefault();
+
+  const name = document.getElementById("quick-expense-name-input").value.trim();
+  if (!name) {
+    alert("צריך לתת שם להוצאה המהירה");
+    return;
+  }
+
+  const amount = parseNonNegativeAmount(document.getElementById("quick-expense-amount-input").value);
+  if (amount === null) {
+    alert(NEGATIVE_AMOUNT_MESSAGE);
+    return;
+  }
+
+  const categoryValue = document.getElementById("quick-expense-category-input").value;
+  const [type, category] = categoryValue.split(":");
+
+  if (editingQuickExpenseId === null) {
+    budgetData.quickExpenses.push({ id: Date.now(), name: name, amount: amount, type: type, category: category });
+  } else {
+    const quickExpense = budgetData.quickExpenses.find((qe) => qe.id === editingQuickExpenseId);
+    if (quickExpense) {
+      quickExpense.name = name;
+      quickExpense.amount = amount;
+      quickExpense.type = type;
+      quickExpense.category = category;
+    }
+  }
+
+  saveData();
+  closeQuickExpenseModal();
+  renderQuickExpenses();
+});
+
+// כשלוחצים "מחק הוצאה מהירה" (מוצג רק במצב עריכה):
+document.getElementById("quick-expense-delete-button").addEventListener("click", function () {
+  const confirmed = confirm("למחוק את ההוצאה המהירה הזו? הוצאות שכבר נוצרו ממנה לא יימחקו. אי אפשר לשחזר את זה.");
+  if (!confirmed) {
+    return;
+  }
+
+  budgetData.quickExpenses = budgetData.quickExpenses.filter((qe) => qe.id !== editingQuickExpenseId);
+  saveData();
+  closeQuickExpenseModal();
+  renderQuickExpenses();
 });
 
 // כשלוחצים "עדכן הוצאות":
@@ -2275,7 +2526,9 @@ function renderBalanceForecastSection() {
 
 // מציגות את הכל פעם אחת כשהעמוד נטען
 document.getElementById("current-month-label").textContent = getCurrentMonthLabel();
+populateQuickExpenseCategoryOptions();
 renderIncomeSources();
+renderQuickExpenses();
 renderSavingsGoals();
 renderHistoryTable();
 renderDashboard();
