@@ -692,6 +692,13 @@ body {
   color: var(--color-expenses);
 }
 
+/* "נוסף X פעמים · סה"כ Y ₪" - שורת מעקב שימוש חודשי, מתחת לפרטי הקטגוריה */
+.quick-expense-usage {
+  font-size: 12px;
+  color: var(--color-text-muted);
+  margin-top: 2px;
+}
+
 .progress-bar-track {
   background-color: #e5e7eb;
   border-radius: 8px;

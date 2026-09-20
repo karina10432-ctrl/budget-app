@@ -189,6 +189,15 @@ function ensureBackwardCompatibleFields() {
   if (!Array.isArray(budgetData.quickExpenses)) {
     budgetData.quickExpenses = [];
   }
+  // הוצאות מהירות ישנות (מלפני שהוספנו מעקב שימוש) - נותנות להן מונים ריקים כברירת מחדל
+  budgetData.quickExpenses.forEach((qe) => {
+    if (typeof qe.usageCount !== "number" || !isFinite(qe.usageCount)) {
+      qe.usageCount = 0;
+    }
+    if (typeof qe.usageTotal !== "number" || !isFinite(qe.usageTotal)) {
+      qe.usageTotal = 0;
+    }
+  });
   // אם יש שורות היסטוריה ישנות בלי id (מלפני שהוספנו מחיקה) - נוסיף להן אחד
   budgetData.history.forEach((entry, index) => {
     if (!entry.id) {
@@ -928,11 +937,17 @@ document.getElementById("close-month-button").addEventListener("click", function
   variableFields.forEach((field) => {
     budgetData.expensesVariable[field.key] = 0;
   });
+  // הוצאות מהירות עצמן נשארות (בדיוק כמו מקורות הכנסה/קטגוריות) - רק מונה השימוש החודשי שלהן מתאפס
+  budgetData.quickExpenses.forEach((qe) => {
+    qe.usageCount = 0;
+    qe.usageTotal = 0;
+  });
 
   saveData();
 
   // מרעננות את השדות בטפסים כדי שיציגו 0, ולא את המספרים הישנים
   renderIncomeSources();
+  renderQuickExpenses();
   fixedFields.forEach((field) => {
     document.getElementById(field.id).value = 0;
   });
@@ -1277,7 +1292,33 @@ function sanitizeImportedQuickExpenses(quickExpenses) {
       return { ok: false };
     }
     seenIds.add(qe.id);
-    sanitized.push({ id: qe.id, name: qe.name, amount: qe.amount, type: qe.type, category: qe.category });
+
+    // usageCount/usageTotal הם מונה תצוגה שנוסף אחרי - גיבוי ישן בלעדיהם ממשיך לעבוד (ברירת מחדל 0),
+    // אבל אם הם כן קיימים בקובץ הם חייבים להיות מספרים תקינים ולא-שליליים כמו כל שדה כספי אחר.
+    let usageCount = 0;
+    if (qe.usageCount !== undefined) {
+      if (!isValidNonNegativeNumber(qe.usageCount)) {
+        return { ok: false };
+      }
+      usageCount = qe.usageCount;
+    }
+    let usageTotal = 0;
+    if (qe.usageTotal !== undefined) {
+      if (!isValidNonNegativeNumber(qe.usageTotal)) {
+        return { ok: false };
+      }
+      usageTotal = qe.usageTotal;
+    }
+
+    sanitized.push({
+      id: qe.id,
+      name: qe.name,
+      amount: qe.amount,
+      type: qe.type,
+      category: qe.category,
+      usageCount: usageCount,
+      usageTotal: usageTotal,
+    });
   }
   return { ok: true, value: sanitized };
 }
@@ -1650,6 +1691,9 @@ function renderQuickExpenses() {
       '<div class="quick-expense-details">' +
       '<span class="quick-expense-amount">' + formatMoney(qe.amount) + "</span> · " +
       getQuickExpenseCategoryLabel(qe.type, qe.category) +
+      "</div>" +
+      '<div class="quick-expense-usage">' +
+      "נוסף " + qe.usageCount + " פעמים · סה\"כ " + formatMoney(qe.usageTotal) +
       "</div>";
     container.appendChild(card);
   });
@@ -1658,7 +1702,11 @@ function renderQuickExpenses() {
 // כשלוחצים "+" על הוצאה מהירה: מוסיפה את הסכום שלה לקטגוריה המתאימה ב-expensesFixed/
 // expensesVariable הקיימים (בדיוק כמו עדכון ידני של הטופס), עם תאריך "עכשיו" באופן טבעי -
 // כי אלה שדות "החודש הנוכחי" בלבד, בלי שדה תאריך נפרד (בהתאם למבנה הקיים של האפליקציה).
-// לא נוגעת ב-quickExpenses עצמה - עריכה עתידית של הקיצור לא משנה הוצאות שכבר נוצרו כך.
+// לא נוגעת ב-quickExpenses עצמה מעבר למונים - עריכה עתידית של הקיצור לא משנה הוצאות שכבר נוצרו כך.
+//
+// usageCount/usageTotal הם מונה תצוגה בלבד ("נוסף X פעמים · סה"כ Y ₪") - לא מנגנון הוצאות חדש.
+// usageTotal מצטבר לפי הסכום שהיה בפועל בכל לחיצה (quickExpense.amount ברגע הלחיצה), ולא
+// usageCount * amount הנוכחי - כך ששינוי מחיר באמצע החודש לא "מתקן" רטרואקטיבית לחיצות קודמות.
 function applyQuickExpense(quickExpenseId) {
   const quickExpense = budgetData.quickExpenses.find((qe) => qe.id === quickExpenseId);
   if (!quickExpense) {
@@ -1671,8 +1719,12 @@ function applyQuickExpense(quickExpenseId) {
     budgetData.expensesVariable[quickExpense.category] += quickExpense.amount;
   }
 
+  quickExpense.usageCount += 1;
+  quickExpense.usageTotal += quickExpense.amount;
+
   saveData();
   fillAllInputs(); // מרעננת את שדות טופס ההוצאות, כדי שלא יישארו עם ערך ישן ויידרסו בטעות
+  renderQuickExpenses(); // מרעננת את "נוסף X פעמים · סה"כ Y ₪"
   renderDashboard();
 }
 
@@ -1770,7 +1822,15 @@ document.getElementById("quick-expense-form").addEventListener("submit", functio
   const [type, category] = categoryValue.split(":");
 
   if (editingQuickExpenseId === null) {
-    budgetData.quickExpenses.push({ id: Date.now(), name: name, amount: amount, type: type, category: category });
+    budgetData.quickExpenses.push({
+      id: Date.now(),
+      name: name,
+      amount: amount,
+      type: type,
+      category: category,
+      usageCount: 0,
+      usageTotal: 0,
+    });
   } else {
     const quickExpense = budgetData.quickExpenses.find((qe) => qe.id === editingQuickExpenseId);
     if (quickExpense) {
