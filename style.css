@@ -109,7 +109,7 @@ body {
 
 .card-breakdown {
   font-size: 12px;
-  color: #9ca3af;
+  color: var(--color-text-muted);
   margin-top: 6px;
 }
 
@@ -1001,6 +1001,19 @@ body {
   .calendar-header .secondary-button {
     padding: 10px 12px;
     font-size: 13px;
+  }
+
+  /* במסכים צרים מאוד הכותרת עולה לשורה משלה (במרכז), וכפתורי "חודש קודם"/"חודש הבא"
+     יורדים יחד לשורה אחת מתחתיה במקום שהשני "יתייתם" לבד - בלי לגעת בסדר האלמנטים ב-HTML */
+  .calendar-header .calendar-title {
+    order: -1;
+    flex: 1 1 100%;
+    text-align: center;
+    margin-bottom: 4px;
+  }
+
+  .calendar-header .secondary-button {
+    flex: 1 1 auto;
   }
 
   /* גרף הדונאט - קצת יותר קטן כדי להשאיר מקום נוח למקרא בצידו */

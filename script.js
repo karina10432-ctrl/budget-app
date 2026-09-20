@@ -90,10 +90,33 @@ const variableFields = [
   { id: "exp-other", key: "other", label: "שונות", icon: "📦" },
 ];
 
-// פונקציה קטנה שמעצבת מספר כסף עם ₪ ופסיקים (למשל 8000 -> ₪8,000)
+// פונקציה קטנה שמעצבת מספר כסף עם ₪ ופסיקים (למשל 8000 -> ₪8,000).
+// מספרים עשרוניים מוצגים עם עד 2 ספרות אחרי הנקודה (מעוגל), בלי לפגוע בהצגת מספרים שלמים
+// (minimumFractionDigits: 0 מונע ".00" מיותר על סכומים עגולים).
 function formatMoney(amount) {
-  return "₪" + amount.toLocaleString("he-IL");
+  return "₪" + amount.toLocaleString("he-IL", { minimumFractionDigits: 0, maximumFractionDigits: 2 });
 }
+
+// ממירה ערך גולמי משדה טופס (מחרוזת) למספר לא-שלילי, לשימוש לפני שמירה ל-budgetData.
+// קלט ריק/לא מספרי -> 0 (בדיוק כמו ההתנהגות הקודמת של Number(...) || 0).
+// מספר שלילי -> null, כדי שקוד הטופס הקורא יוכל לחסום את השמירה ולהציג הודעה למשתמשת,
+// במקום להסתמך רק על min="0" של ה-HTML (שלא נאכף בפועל כשקוראים .value ישירות).
+function parseNonNegativeAmount(rawValue) {
+  if (rawValue === "" || rawValue === null || rawValue === undefined) {
+    return 0;
+  }
+  const num = Number(rawValue);
+  if (!isFinite(num)) {
+    return 0;
+  }
+  if (num < 0) {
+    return null;
+  }
+  return num;
+}
+
+// ההודעה האחידה שמוצגת כשמנסים לשמור סכום שלילי בכל טופס כספי באפליקציה
+const NEGATIVE_AMOUNT_MESSAGE = "אי אפשר להזין סכום שלילי. נא לתקן ולנסות שוב.";
 
 // שומרת את budgetData בזיכרון הקבוע של הדפדפן (localStorage).
 // localStorage יודע לשמור רק טקסט, אז JSON.stringify הופך את האובייקט שלנו לטקסט.
@@ -203,7 +226,7 @@ function calculateBudgetUsage() {
 
 // מציגה את הנתונים העדכניים מ-budgetData ב-4 כרטיסי ה-Dashboard
 function renderDashboard() {
-  const totalIncome = budgetData.income.salary + budgetData.income.other;
+  const totalIncome = calculateTotalIncome();
   const expenses = calculateExpensesBreakdown();
   const totalSavings = calculateTotalSavings();
   const remaining = totalIncome - expenses.total - totalSavings;
@@ -572,7 +595,7 @@ function renderSavingsGoals() {
     card.innerHTML =
       '<div class="goal-header">' +
       '<span class="goal-name">' + goal.name + "</span>" +
-      '<button class="goal-delete" data-id="' + goal.id + '">🗑️</button>' +
+      '<button class="goal-delete" data-id="' + goal.id + '" aria-label="מחק יעד חיסכון">🗑️</button>' +
       "</div>" +
       '<div class="progress-bar-track">' +
       '<div class="progress-bar-fill" style="width:' + percent + '%"></div>' +
@@ -819,7 +842,7 @@ function renderHistoryTable() {
       "<td>" + formatMoney(month.expenses) + "</td>" +
       "<td>" + formatMoney(month.savings) + "</td>" +
       "<td>" + formatMoney(month.remaining) + "</td>" +
-      '<td><button class="history-delete" data-id="' + month.id + '">🗑️</button></td>';
+      '<td><button class="history-delete" data-id="' + month.id + '" aria-label="מחק רשומה">🗑️</button></td>';
     tableBody.appendChild(row);
   });
 }
@@ -853,7 +876,7 @@ document.getElementById("close-month-button").addEventListener("click", function
     return;
   }
 
-  const totalIncome = budgetData.income.salary + budgetData.income.other;
+  const totalIncome = calculateTotalIncome();
   const expenses = calculateExpensesBreakdown();
   const totalSavings = calculateTotalSavings();
   const remaining = totalIncome - expenses.total - totalSavings;
@@ -945,12 +968,21 @@ document.getElementById("goal-form").addEventListener("submit", function (event)
     return;
   }
 
+  const target = parseNonNegativeAmount(document.getElementById("goal-target").value);
+  const saved = parseNonNegativeAmount(document.getElementById("goal-saved").value);
+  const monthlyDeposit = parseNonNegativeAmount(document.getElementById("goal-monthly").value);
+
+  if (target === null || saved === null || monthlyDeposit === null) {
+    alert(NEGATIVE_AMOUNT_MESSAGE);
+    return;
+  }
+
   const newGoal = {
     id: Date.now(), // מספר שמשתנה כל מילישנייה - מתאים כ"תעודת זהות" ייחודית למטרה
     name: name,
-    target: Number(document.getElementById("goal-target").value) || 0,
-    saved: Number(document.getElementById("goal-saved").value) || 0,
-    monthlyDeposit: Number(document.getElementById("goal-monthly").value) || 0,
+    target: target,
+    saved: saved,
+    monthlyDeposit: monthlyDeposit,
     // תאריך יעד - שדה חדש (שלב 16), אופציונלי. אם לא הוזן - שומרות null ולא תאריך מומצא.
     // "YYYY-MM-DD" כמו שמגיע מ-input type="date", או null.
     targetDate: document.getElementById("goal-target-date").value || null,
@@ -986,31 +1018,254 @@ function fillAllInputs() {
 // מציגה בטפסים את הערכים ההתחלתיים
 fillAllInputs();
 
-// בודקת שהאובייקט שקיבלנו (מקובץ שיובא) נראה כמו budgetData אמיתי -
-// כלומר שיש בו את כל החלקים שהאפליקציה מכירה, מהסוג הנכון.
-function isValidBudgetData(data) {
+// ===== ולידציה עמוקה של קובץ שיובא (Import) =====
+// המטרה: לוודא שאין שום דרך שקובץ פגום/חלקי יוביל ל-"₪NaN" בדשבורד, ולעולם לא לדרוס
+// את הנתונים הקיימים לפני שווידאנו שהקובץ החדש תקין לגמרי. הכללים:
+// - מפתח כספי שחסר לגמרי בתוך אובייקט קיים (למשל expensesFixed בלי "arnona") - תיקון בטוח,
+//   ממלאות אותו ב-0 (בדיוק ברוח ensureBackwardCompatibleFields הקיימת, ברמת שדה בודד).
+// - ערך שקיים אבל לא מספר תקין/לא-שלילי, או תאריך שלא קיים בלוח השנה - לא ניתן לתיקון בטוח,
+//   ודוחות את כל הקובץ (עדיף לדחות עם הודעה ברורה מאשר לנחש).
+
+// בודקת שערך הוא מספר תקין (לא NaN/Infinity) ולא שלילי - כל שדה כספי בייבוא עובר את הבדיקה הזו
+function isValidNonNegativeNumber(value) {
+  return typeof value === "number" && isFinite(value) && value >= 0;
+}
+
+// בודקת ששילוב שנה/חודש (0=ינואר, כמו getMonth())/יום מתאר יום שבאמת קיים בלוח השנה
+function isValidCalendarDayForMonth(year, month, day) {
+  if (!Number.isInteger(year) || !Number.isInteger(month) || !Number.isInteger(day)) {
+    return false;
+  }
+  if (month < 0 || month > 11 || day < 1 || day > 31) {
+    return false;
+  }
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  return day <= daysInMonth;
+}
+
+// בודקת שמחרוזת בפורמט "YYYY-MM-DD" (כמו מ-input type="date") מתארת תאריך אמיתי -
+// כדי שתאריך כמו "2026-02-30" (30 בפברואר, לא קיים) לא יעבור בשקט ויגלוש לחודש אחר
+function isValidCalendarDateString(dateString) {
+  if (typeof dateString !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(dateString)) {
+    return false;
+  }
+  const parts = dateString.split("-");
+  return isValidCalendarDayForMonth(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
+}
+
+// בודקת אובייקט כספי מיובא (income/expensesFixed/expensesVariable/budgets) מול רשימת המפתחות הצפויה.
+// מפתח חסר -> ברירת מחדל 0 (תיקון בטוח). מפתח קיים עם ערך לא תקין -> ok: false (דוחות את כל הקובץ).
+function sanitizeImportedMoneyFields(obj, fieldKeys) {
+  if (!obj || typeof obj !== "object") {
+    return { ok: false };
+  }
+  const value = {};
+  for (const key of fieldKeys) {
+    if (!(key in obj)) {
+      value[key] = 0;
+      continue;
+    }
+    if (!isValidNonNegativeNumber(obj[key])) {
+      return { ok: false };
+    }
+    value[key] = obj[key];
+  }
+  return { ok: true, value: value };
+}
+
+// בודקת ומנקה את רשימת מטרות החיסכון המיובאת - שם, שלושת השדות הכספיים, ותאריך יעד תקין (אם קיים)
+function sanitizeImportedSavingsGoals(goals) {
+  if (!Array.isArray(goals)) {
+    return { ok: false };
+  }
+  const sanitized = [];
+  for (const goal of goals) {
+    if (!goal || typeof goal !== "object" || typeof goal.name !== "string") {
+      return { ok: false };
+    }
+    const money = sanitizeImportedMoneyFields(goal, ["target", "saved", "monthlyDeposit"]);
+    if (!money.ok) {
+      return { ok: false };
+    }
+    let targetDate = null;
+    if (goal.targetDate !== null && goal.targetDate !== undefined) {
+      if (!isValidCalendarDateString(goal.targetDate)) {
+        return { ok: false };
+      }
+      targetDate = goal.targetDate;
+    }
+    sanitized.push({
+      id: typeof goal.id === "number" ? goal.id : Date.now() + sanitized.length,
+      name: goal.name,
+      target: money.value.target,
+      saved: money.value.saved,
+      monthlyDeposit: money.value.monthlyDeposit,
+      targetDate: targetDate,
+    });
+  }
+  return { ok: true, value: sanitized };
+}
+
+// בודקת ומנקה את היסטוריית החודשים המיובאת. שימו לב: "remaining" הוא ערך מחושב שיכול להיות
+// שלילי בלגיטימיות (חודש עם חריגה מהתקציב) - בודקות רק שהוא מספר תקין, בלי הגבלת סימן.
+function sanitizeImportedHistory(history) {
+  if (!Array.isArray(history)) {
+    return { ok: false };
+  }
+  const sanitized = [];
+  for (const entry of history) {
+    if (!entry || typeof entry !== "object" || typeof entry.month !== "string") {
+      return { ok: false };
+    }
+    if (
+      !isValidNonNegativeNumber(entry.income) ||
+      !isValidNonNegativeNumber(entry.expenses) ||
+      !isValidNonNegativeNumber(entry.savings)
+    ) {
+      return { ok: false };
+    }
+    if (typeof entry.remaining !== "number" || !isFinite(entry.remaining)) {
+      return { ok: false };
+    }
+    sanitized.push({
+      id: typeof entry.id === "number" ? entry.id : Date.now() + sanitized.length,
+      month: entry.month,
+      income: entry.income,
+      expenses: entry.expenses,
+      savings: entry.savings,
+      remaining: entry.remaining,
+    });
+  }
+  return { ok: true, value: sanitized };
+}
+
+// בודקת ומנקה את אירועי לוח השנה המיובאים - סוג אירוע מוכר (מתוך eventTypes הקיימת), סכום
+// לא-שלילי, ויום/חודש/שנה שמתארים תאריך אמיתי (לאירוע חד-פעמי; לאירוע חוזר מספיק יום 1-31 תקין,
+// בדיוק לפי אותה לוגיקה שכבר קיימת ב-collectEventsForDay/collectEventsForMonth)
+function sanitizeImportedCalendarEvents(events) {
+  if (!Array.isArray(events)) {
+    return { ok: false };
+  }
+  const validTypeKeys = eventTypes.map((t) => t.key);
+  const sanitized = [];
+  for (const ev of events) {
+    if (!ev || typeof ev !== "object") {
+      return { ok: false };
+    }
+    if (!validTypeKeys.includes(ev.type)) {
+      return { ok: false };
+    }
+    if (typeof ev.name !== "string" || !ev.name.trim()) {
+      return { ok: false };
+    }
+    if (!isValidNonNegativeNumber(ev.amount)) {
+      return { ok: false };
+    }
+    const recurring = !!ev.recurring;
+    if (!Number.isInteger(ev.day) || ev.day < 1 || ev.day > 31) {
+      return { ok: false };
+    }
+    if (!Number.isInteger(ev.year) || !Number.isInteger(ev.month) || ev.month < 0 || ev.month > 11) {
+      return { ok: false };
+    }
+    if (!recurring && !isValidCalendarDayForMonth(ev.year, ev.month, ev.day)) {
+      return { ok: false };
+    }
+    sanitized.push({
+      id: typeof ev.id === "number" ? ev.id : Date.now() + sanitized.length,
+      type: ev.type,
+      name: ev.name,
+      amount: ev.amount,
+      day: ev.day,
+      recurring: recurring,
+      year: ev.year,
+      month: ev.month,
+    });
+  }
+  return { ok: true, value: sanitized };
+}
+
+// הפונקציה הראשית: בודקת קובץ שיובא לעומק, ומחזירה גרסה נקייה ובטוחה שלו אם הוא תקין.
+// { ok: true, value: <budgetData נקי> } או { ok: false } אם הקובץ פגום באופן שלא ניתן לתקן בבטחה.
+function sanitizeImportedBudgetData(data) {
   if (!data || typeof data !== "object") {
-    return false;
+    return { ok: false };
   }
-  if (!data.income || typeof data.income.salary !== "number" || typeof data.income.other !== "number") {
-    return false;
+
+  if (!data.income || typeof data.income !== "object") {
+    return { ok: false };
   }
+  const income = sanitizeImportedMoneyFields(data.income, ["salary", "other"]);
+  if (!income.ok) {
+    return { ok: false };
+  }
+
   if (!data.expensesFixed || typeof data.expensesFixed !== "object") {
-    return false;
+    return { ok: false };
   }
+  const expensesFixed = sanitizeImportedMoneyFields(data.expensesFixed, fixedFields.map((f) => f.key));
+  if (!expensesFixed.ok) {
+    return { ok: false };
+  }
+
   if (!data.expensesVariable || typeof data.expensesVariable !== "object") {
-    return false;
+    return { ok: false };
   }
+  const expensesVariable = sanitizeImportedMoneyFields(data.expensesVariable, variableFields.map((f) => f.key));
+  if (!expensesVariable.ok) {
+    return { ok: false };
+  }
+
   if (!data.budgets || typeof data.budgets !== "object") {
-    return false;
+    return { ok: false };
   }
-  if (!Array.isArray(data.savingsGoals)) {
-    return false;
+  const budgets = sanitizeImportedMoneyFields(data.budgets, variableFields.map((f) => f.key));
+  if (!budgets.ok) {
+    return { ok: false };
   }
-  if (!Array.isArray(data.history)) {
-    return false;
+
+  const savingsGoals = sanitizeImportedSavingsGoals(data.savingsGoals);
+  if (!savingsGoals.ok) {
+    return { ok: false };
   }
-  return true;
+
+  const history = sanitizeImportedHistory(data.history);
+  if (!history.ok) {
+    return { ok: false };
+  }
+
+  // calendarEvents ו-currentBalance נוספו לאפליקציה אחרי savingsGoals/history - גיבוי ישן לגיטימי
+  // עשוי שלא לכלול אותם בכלל (בדיוק כמו ש-ensureBackwardCompatibleFields כבר מטפלת בזה).
+  // אם הם כן קיימים בקובץ - הם חייבים להיות תקינים.
+  let calendarEvents = { ok: true, value: [] };
+  if (data.calendarEvents !== undefined) {
+    calendarEvents = sanitizeImportedCalendarEvents(data.calendarEvents);
+    if (!calendarEvents.ok) {
+      return { ok: false };
+    }
+  }
+
+  let currentBalance = 0;
+  if (data.currentBalance !== undefined) {
+    if (!isValidNonNegativeNumber(data.currentBalance)) {
+      return { ok: false };
+    }
+    currentBalance = data.currentBalance;
+  }
+
+  return {
+    ok: true,
+    value: {
+      income: income.value,
+      expensesFixed: expensesFixed.value,
+      expensesVariable: expensesVariable.value,
+      budgets: budgets.value,
+      savingsGoals: savingsGoals.value,
+      history: history.value,
+      calendarEvents: calendarEvents.value,
+      currentBalance: currentBalance,
+    },
+  };
 }
 
 // כשלוחצים "⬇️ ייצוא נתונים": יוצרת קובץ JSON מכל budgetData, ומורידה אותו למחשב
@@ -1062,8 +1317,12 @@ document.getElementById("import-file-input").addEventListener("change", function
       return;
     }
 
-    if (!isValidBudgetData(parsedData)) {
-      alert("הקובץ אינו בפורמט שהאפליקציה מכירה. ודאי שזה קובץ גיבוי שיוצא מהאפליקציה הזו.");
+    const sanitized = sanitizeImportedBudgetData(parsedData);
+    if (!sanitized.ok) {
+      alert(
+        "הקובץ אינו תקין - חסרים בו שדות, יש בו ערכים לא תקינים או שליליים, או תאריך שלא קיים בלוח השנה. " +
+        "ודאי שזה קובץ גיבוי שיוצא מהאפליקציה הזו. הנתונים הקיימים שלך לא נפגעו."
+      );
       event.target.value = "";
       return;
     }
@@ -1074,8 +1333,8 @@ document.getElementById("import-file-input").addEventListener("change", function
       return;
     }
 
-    budgetData = parsedData;
-    ensureBackwardCompatibleFields(); // למקרה שהקובץ המיובא נוצר לפני שהיו לנו כל השדות
+    budgetData = sanitized.value;
+    ensureBackwardCompatibleFields(); // ליתר ביטחון, כמו בכל טעינת נתונים אחרת
     saveData();
 
     // מרעננות את כל התצוגה - הטפסים, הדשבורד, המטרות, ההיסטוריה, לוח השנה והיתרה - עם הנתונים שיובאו
@@ -1097,8 +1356,13 @@ document.getElementById("import-file-input").addEventListener("change", function
 document.getElementById("income-form").addEventListener("submit", function (event) {
   event.preventDefault(); // מונע רפרש של הדף
 
-  const salary = Number(document.getElementById("salary-input").value) || 0;
-  const other = Number(document.getElementById("other-income-input").value) || 0;
+  const salary = parseNonNegativeAmount(document.getElementById("salary-input").value);
+  const other = parseNonNegativeAmount(document.getElementById("other-income-input").value);
+
+  if (salary === null || other === null) {
+    alert(NEGATIVE_AMOUNT_MESSAGE);
+    return;
+  }
 
   budgetData.income.salary = salary;
   budgetData.income.other = other;
@@ -1111,14 +1375,34 @@ document.getElementById("income-form").addEventListener("submit", function (even
 document.getElementById("expenses-form").addEventListener("submit", function (event) {
   event.preventDefault(); // מונע רפרש של הדף
 
+  // קודם קוראות ובודקות את כל הערכים, ורק אם כולם תקינים כותבות ל-budgetData -
+  // כך שערך שלילי אחד לא משנה חלקית את הנתונים לפני שמפסיקים
+  const newFixed = {};
+  const newVariable = {};
+  let hasNegative = false;
+
   fixedFields.forEach((field) => {
-    const value = Number(document.getElementById(field.id).value) || 0;
-    budgetData.expensesFixed[field.key] = value;
+    const value = parseNonNegativeAmount(document.getElementById(field.id).value);
+    if (value === null) hasNegative = true;
+    newFixed[field.key] = value;
   });
 
   variableFields.forEach((field) => {
-    const value = Number(document.getElementById(field.id).value) || 0;
-    budgetData.expensesVariable[field.key] = value;
+    const value = parseNonNegativeAmount(document.getElementById(field.id).value);
+    if (value === null) hasNegative = true;
+    newVariable[field.key] = value;
+  });
+
+  if (hasNegative) {
+    alert(NEGATIVE_AMOUNT_MESSAGE);
+    return;
+  }
+
+  fixedFields.forEach((field) => {
+    budgetData.expensesFixed[field.key] = newFixed[field.key];
+  });
+  variableFields.forEach((field) => {
+    budgetData.expensesVariable[field.key] = newVariable[field.key];
   });
 
   saveData();
@@ -1129,9 +1413,22 @@ document.getElementById("expenses-form").addEventListener("submit", function (ev
 document.getElementById("budgets-form").addEventListener("submit", function (event) {
   event.preventDefault(); // מונע רפרש של הדף
 
+  const newBudgets = {};
+  let hasNegative = false;
+
   variableFields.forEach((field) => {
-    const value = Number(document.getElementById("budget-" + field.key).value) || 0;
-    budgetData.budgets[field.key] = value;
+    const value = parseNonNegativeAmount(document.getElementById("budget-" + field.key).value);
+    if (value === null) hasNegative = true;
+    newBudgets[field.key] = value;
+  });
+
+  if (hasNegative) {
+    alert(NEGATIVE_AMOUNT_MESSAGE);
+    return;
+  }
+
+  variableFields.forEach((field) => {
+    budgetData.budgets[field.key] = newBudgets[field.key];
   });
 
   saveData();
@@ -1464,7 +1761,11 @@ document.getElementById("event-form").addEventListener("submit", function (event
   }
 
   const type = document.getElementById("event-type-input").value;
-  const amount = Number(document.getElementById("event-amount-input").value) || 0;
+  const amount = parseNonNegativeAmount(document.getElementById("event-amount-input").value);
+  if (amount === null) {
+    alert(NEGATIVE_AMOUNT_MESSAGE);
+    return;
+  }
   const day = Number(document.getElementById("event-day-input").value) || pendingEventDate.day;
   const recurring = document.getElementById("event-recurring-input").checked;
 
@@ -1524,7 +1825,13 @@ function renderBalanceCard() {
 
 // כשלוחצים "שמור" בכרטיס היתרה הנוכחית:
 document.getElementById("balance-save-button").addEventListener("click", function () {
-  const newBalance = Number(document.getElementById("balance-input").value) || 0;
+  const newBalance = parseNonNegativeAmount(document.getElementById("balance-input").value);
+
+  if (newBalance === null) {
+    alert(NEGATIVE_AMOUNT_MESSAGE);
+    return;
+  }
+
   budgetData.currentBalance = newBalance;
 
   saveData();
