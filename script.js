@@ -2,9 +2,10 @@
 // שימי לב: זה עם let ולא const - כי בעוד רגע (loadData) אנחנו עשויות להחליף
 // את כל האובייקט הזה בנתונים שנטענו מה-localStorage.
 let budgetData = {
+  // רשימה של מקורות הכנסה - { id, name, amount } - במקום salary/other קבועים.
+  // ensureBackwardCompatibleFields() ממירה אוטומטית נתונים ישנים בפורמט salary/other לרשימה כזו.
   income: {
-    salary: 8000,
-    other: 0,
+    sources: [{ id: 1, name: "משכורת", amount: 8000 }],
   },
   expensesFixed: {
     rent: 0,
@@ -136,11 +137,27 @@ function loadData() {
 // טוענות נתונים שמורים (אם יש) לפני שממשיכות
 loadData();
 
-// בודקת שלכל השדות שהוספנו במהלך הדרך (תקציבים, מטרות, היסטוריה, לוח שנה)
+// ממירה income בפורמט ישן (salary/other קבועים) למערך sources - בלי לאבד אף ערך, כולל 0,
+// כדי שנתונים קיימים ימשיכו לעבוד גם אחרי השדרוג למקורות הכנסה מרובים.
+// לא נוגעת ב-sources קיים ותקין - נקראת רק כשהוא לא קיים (ר' ensureBackwardCompatibleFields).
+function migrateLegacyIncomeToSources(income) {
+  const salary = income && typeof income.salary === "number" && isFinite(income.salary) ? income.salary : 0;
+  const other = income && typeof income.other === "number" && isFinite(income.other) ? income.other : 0;
+  return [
+    { id: Date.now(), name: "משכורת", amount: Math.max(0, salary) },
+    { id: Date.now() + 1, name: "הכנסה נוספת", amount: Math.max(0, other) },
+  ];
+}
+
+// בודקת שלכל השדות שהוספנו במהלך הדרך (תקציבים, מטרות, היסטוריה, לוח שנה, מקורות הכנסה)
 // יש ברירת מחדל, גם אם budgetData הגיע מגיבוי ישן שנוצר לפני שהם היו קיימים.
 // זה מונע קריסה כשהקוד מנסה לקרוא, למשל, budgets.super ממקום שלא קיים.
 // הפונקציה הזו רצה גם בטעינת הדף וגם אחרי ייבוא גיבוי.
 function ensureBackwardCompatibleFields() {
+  // income.sources הוא הפורמט הנוכחי - אם הוא לא קיים, זה כנראה גיבוי ישן עם salary/other
+  if (!budgetData.income || !Array.isArray(budgetData.income.sources)) {
+    budgetData.income = { sources: migrateLegacyIncomeToSources(budgetData.income) };
+  }
   if (!budgetData.budgets) {
     budgetData.budgets = {
       super: 0,
@@ -205,10 +222,11 @@ function calculateTotalSavings() {
   return total;
 }
 
-// מסכמת את ההכנסה הכוללת (משכורת + הכנסה נוספת) - חילצתי את זה לפונקציה קטנה
-// כדי שגם "סיכום החודש" (שלב 14) יוכל להשתמש באותו חישוב בדיוק, בלי לחשב את זה בנפרד
+// מסכמת את ההכנסה הכוללת מכל מקורות ההכנסה (budgetData.income.sources) - הפונקציה המרכזית
+// היחידה שמחשבת הכנסה כוללת באפליקציה. כל מקום אחר (Dashboard, סיכום חודשי, תקציב יומי,
+// סגירת חודש וכו') קורא לה במקום לחשב הכנסה בעצמו, כדי שהוספת/עריכת/מחיקת מקור תתעדכן בכל מקום.
 function calculateTotalIncome() {
-  return budgetData.income.salary + budgetData.income.other;
+  return budgetData.income.sources.reduce((sum, source) => sum + source.amount, 0);
 }
 
 // מסכמת את התקציב הכולל ואת ההוצאה בפועל הכוללת, על פני כל קטגוריות ההוצאה המשתנות
@@ -892,8 +910,11 @@ document.getElementById("close-month-button").addEventListener("click", function
 
   // מאפסות רק הכנסה והוצאות בפועל, כי אלה משתנות כל חודש.
   // תקציבים ומטרות חיסכון נשארים כמו שהם - הם בדרך כלל דומים מחודש לחודש.
-  budgetData.income.salary = 0;
-  budgetData.income.other = 0;
+  // מקורות ההכנסה עצמם (מי מרוויח) גם נשארים - בדרך כלל אותם אנשים/מקורות מחודש לחודש -
+  // רק הסכום של כל מקור מתאפס, בדיוק כמו שקורה לכל קטגוריית הוצאה.
+  budgetData.income.sources.forEach((source) => {
+    source.amount = 0;
+  });
   fixedFields.forEach((field) => {
     budgetData.expensesFixed[field.key] = 0;
   });
@@ -904,8 +925,7 @@ document.getElementById("close-month-button").addEventListener("click", function
   saveData();
 
   // מרעננות את השדות בטפסים כדי שיציגו 0, ולא את המספרים הישנים
-  document.getElementById("salary-input").value = 0;
-  document.getElementById("other-income-input").value = 0;
+  renderIncomeSources();
   fixedFields.forEach((field) => {
     document.getElementById(field.id).value = 0;
   });
@@ -996,13 +1016,11 @@ document.getElementById("goal-form").addEventListener("submit", function (event)
   renderDashboard(); // כי סכום החיסכון הכולל השתנה
 });
 
-// ממלאת את כל שדות הטפסים (הכנסה, הוצאות, תקציבים) לפי מה שיש כרגע ב-budgetData.
+// ממלאת את כל שדות הטפסים (הוצאות, תקציבים) לפי מה שיש כרגע ב-budgetData.
 // זה קוד שהיה פעם כתוב ישירות כאן (רק בטעינת הדף), והוצאתי אותו לפונקציה נפרדת
 // כדי שנוכל להריץ אותו שוב גם אחרי ייבוא גיבוי - ההתנהגות שלו לא השתנתה.
+// (הכנסה כבר לא טופס עם שדות קבועים - מקורות ההכנסה מוצגים ע"י renderIncomeSources())
 function fillAllInputs() {
-  document.getElementById("salary-input").value = budgetData.income.salary;
-  document.getElementById("other-income-input").value = budgetData.income.other;
-
   fixedFields.forEach((field) => {
     document.getElementById(field.id).value = budgetData.expensesFixed[field.key];
   });
@@ -1139,6 +1157,45 @@ function sanitizeImportedHistory(history) {
   return { ok: true, value: sanitized };
 }
 
+// בודקת ומנקה את מקורות ההכנסה המיובאים (income.sources) - שם לא ריק, וסכום לא-שלילי לכל מקור
+function sanitizeImportedIncomeSources(sources) {
+  if (!Array.isArray(sources)) {
+    return { ok: false };
+  }
+  const sanitized = [];
+  for (const source of sources) {
+    if (!source || typeof source !== "object" || typeof source.name !== "string" || !source.name.trim()) {
+      return { ok: false };
+    }
+    if (!isValidNonNegativeNumber(source.amount)) {
+      return { ok: false };
+    }
+    sanitized.push({
+      id: typeof source.id === "number" ? source.id : Date.now() + sanitized.length,
+      name: source.name,
+      amount: source.amount,
+    });
+  }
+  return { ok: true, value: sanitized };
+}
+
+// בודקת ומנקה את income המיובא - תומכת גם בפורמט הנוכחי (income.sources) וגם בפורמט הישן
+// (income.salary/income.other), כדי שגיבויים מלפני שדרוג מקורות ההכנסה ימשיכו לעבוד בייבוא.
+function sanitizeImportedIncome(income) {
+  if (!income || typeof income !== "object") {
+    return { ok: false };
+  }
+  if (Array.isArray(income.sources)) {
+    return sanitizeImportedIncomeSources(income.sources);
+  }
+  // פורמט ישן - מוודאות ששני השדות תקינים, ואז ממירות למקורות באותה לוגיקה בדיוק כמו בטעינה רגילה
+  const legacyMoney = sanitizeImportedMoneyFields(income, ["salary", "other"]);
+  if (!legacyMoney.ok) {
+    return { ok: false };
+  }
+  return { ok: true, value: migrateLegacyIncomeToSources(legacyMoney.value) };
+}
+
 // בודקת ומנקה את אירועי לוח השנה המיובאים - סוג אירוע מוכר (מתוך eventTypes הקיימת), סכום
 // לא-שלילי, ויום/חודש/שנה שמתארים תאריך אמיתי (לאירוע חד-פעמי; לאירוע חוזר מספיק יום 1-31 תקין,
 // בדיוק לפי אותה לוגיקה שכבר קיימת ב-collectEventsForDay/collectEventsForMonth)
@@ -1192,10 +1249,7 @@ function sanitizeImportedBudgetData(data) {
     return { ok: false };
   }
 
-  if (!data.income || typeof data.income !== "object") {
-    return { ok: false };
-  }
-  const income = sanitizeImportedMoneyFields(data.income, ["salary", "other"]);
+  const income = sanitizeImportedIncome(data.income);
   if (!income.ok) {
     return { ok: false };
   }
@@ -1256,7 +1310,7 @@ function sanitizeImportedBudgetData(data) {
   return {
     ok: true,
     value: {
-      income: income.value,
+      income: { sources: income.value },
       expensesFixed: expensesFixed.value,
       expensesVariable: expensesVariable.value,
       budgets: budgets.value,
@@ -1337,8 +1391,9 @@ document.getElementById("import-file-input").addEventListener("change", function
     ensureBackwardCompatibleFields(); // ליתר ביטחון, כמו בכל טעינת נתונים אחרת
     saveData();
 
-    // מרעננות את כל התצוגה - הטפסים, הדשבורד, המטרות, ההיסטוריה, לוח השנה והיתרה - עם הנתונים שיובאו
+    // מרעננות את כל התצוגה - הטפסים, הדשבורד, מקורות ההכנסה, המטרות, ההיסטוריה, לוח השנה והיתרה - עם הנתונים שיובאו
     fillAllInputs();
+    renderIncomeSources();
     renderSavingsGoals();
     renderHistoryTable();
     renderDashboard();
@@ -1352,22 +1407,144 @@ document.getElementById("import-file-input").addEventListener("change", function
   reader.readAsText(file);
 });
 
-// כשלוחצים "עדכן הכנסה":
-document.getElementById("income-form").addEventListener("submit", function (event) {
-  event.preventDefault(); // מונע רפרש של הדף
+// ===== מקורות הכנסה =====
+// רשימה חופשית באורך כלשהו (budgetData.income.sources), בדיוק כמו savingsGoals/calendarEvents -
+// כל מקור הוא { id, name, amount }. אותו דפוס add/edit/delete-with-modal כמו אירועי לוח השנה.
 
-  const salary = parseNonNegativeAmount(document.getElementById("salary-input").value);
-  const other = parseNonNegativeAmount(document.getElementById("other-income-input").value);
+// בונה מחדש את רשימת מקורות ההכנסה ואת "סה"כ הכנסות", לפי budgetData.income.sources.
+// לא מחשבת סכום בעצמה - קוראת ל-calculateTotalIncome() הקיימת, כדי שיהיה מקור אמת יחיד.
+function renderIncomeSources() {
+  const container = document.getElementById("income-sources-list");
+  container.innerHTML = "";
 
-  if (salary === null || other === null) {
+  budgetData.income.sources.forEach((source) => {
+    const card = document.createElement("div");
+    card.className = "goal-card";
+    card.innerHTML =
+      '<div class="goal-header">' +
+      '<span class="goal-name">' + source.name + "</span>" +
+      '<span class="income-source-actions">' +
+      '<button type="button" class="income-source-edit" data-id="' + source.id + '" aria-label="ערוך מקור הכנסה">✏️</button>' +
+      '<button type="button" class="goal-delete" data-id="' + source.id + '" aria-label="מחק מקור הכנסה">🗑️</button>' +
+      "</span>" +
+      "</div>" +
+      '<div class="income-source-amount">' + formatMoney(source.amount) + "</div>";
+    container.appendChild(card);
+  });
+
+  document.getElementById("income-sources-total-value").textContent = formatMoney(calculateTotalIncome());
+}
+
+// כשעורכים מקור קיים, שומרת כאן את ה-id שלו. null = מוסיפות מקור חדש (בדיוק כמו editingEventId)
+let editingIncomeSourceId = null;
+
+function openAddIncomeSourceModal() {
+  editingIncomeSourceId = null;
+
+  document.getElementById("income-source-modal-title").textContent = "הוספת מקור הכנסה";
+  document.getElementById("income-source-name-input").value = "";
+  document.getElementById("income-source-amount-input").value = "";
+  document.getElementById("income-source-delete-button").style.display = "none";
+
+  document.getElementById("income-source-modal-overlay").style.display = "flex";
+}
+
+function openEditIncomeSourceModal(sourceId) {
+  const source = budgetData.income.sources.find((s) => s.id === sourceId);
+  if (!source) {
+    return;
+  }
+
+  editingIncomeSourceId = sourceId;
+
+  document.getElementById("income-source-modal-title").textContent = "עריכת מקור הכנסה";
+  document.getElementById("income-source-name-input").value = source.name;
+  document.getElementById("income-source-amount-input").value = source.amount;
+  document.getElementById("income-source-delete-button").style.display = "inline-block";
+
+  document.getElementById("income-source-modal-overlay").style.display = "flex";
+}
+
+function closeIncomeSourceModal() {
+  document.getElementById("income-source-modal-overlay").style.display = "none";
+  editingIncomeSourceId = null;
+}
+
+document.getElementById("add-income-source-button").addEventListener("click", openAddIncomeSourceModal);
+document.getElementById("income-source-cancel-button").addEventListener("click", closeIncomeSourceModal);
+
+// לחיצה על הרקע הכהה מסביב לחלון (ולא על החלון עצמו) סוגרת את המודאל
+document.getElementById("income-source-modal-overlay").addEventListener("click", function (event) {
+  if (event.target.id === "income-source-modal-overlay") {
+    closeIncomeSourceModal();
+  }
+});
+
+// מאזין לחיצה אחד על כל רשימת מקורות ההכנסה - תופס גם עריכה וגם מחיקה מהירה, בלי מאזין נפרד לכל כפתור
+document.getElementById("income-sources-list").addEventListener("click", function (event) {
+  const editButton = event.target.closest(".income-source-edit");
+  if (editButton) {
+    openEditIncomeSourceModal(Number(editButton.getAttribute("data-id")));
+    return;
+  }
+
+  const deleteButton = event.target.closest(".goal-delete");
+  if (deleteButton) {
+    const confirmed = confirm("למחוק את מקור ההכנסה הזה? אי אפשר לשחזר את זה.");
+    if (!confirmed) {
+      return;
+    }
+    const idToDelete = Number(deleteButton.getAttribute("data-id"));
+    budgetData.income.sources = budgetData.income.sources.filter((s) => s.id !== idToDelete);
+    saveData();
+    renderIncomeSources();
+    renderDashboard();
+  }
+});
+
+// כשלוחצים "שמור" בטופס מקור ההכנסה (גם בהוספה וגם בעריכה):
+document.getElementById("income-source-form").addEventListener("submit", function (event) {
+  event.preventDefault();
+
+  const name = document.getElementById("income-source-name-input").value.trim();
+  if (!name) {
+    alert("צריך לתת שם למקור ההכנסה");
+    return;
+  }
+
+  const amount = parseNonNegativeAmount(document.getElementById("income-source-amount-input").value);
+  if (amount === null) {
     alert(NEGATIVE_AMOUNT_MESSAGE);
     return;
   }
 
-  budgetData.income.salary = salary;
-  budgetData.income.other = other;
+  if (editingIncomeSourceId === null) {
+    budgetData.income.sources.push({ id: Date.now(), name: name, amount: amount });
+  } else {
+    const source = budgetData.income.sources.find((s) => s.id === editingIncomeSourceId);
+    if (source) {
+      source.name = name;
+      source.amount = amount;
+    }
+  }
 
   saveData();
+  closeIncomeSourceModal();
+  renderIncomeSources();
+  renderDashboard();
+});
+
+// כשלוחצים "מחק מקור" (מוצג רק במצב עריכה):
+document.getElementById("income-source-delete-button").addEventListener("click", function () {
+  const confirmed = confirm("למחוק את מקור ההכנסה הזה? אי אפשר לשחזר את זה.");
+  if (!confirmed) {
+    return;
+  }
+
+  budgetData.income.sources = budgetData.income.sources.filter((s) => s.id !== editingIncomeSourceId);
+  saveData();
+  closeIncomeSourceModal();
+  renderIncomeSources();
   renderDashboard();
 });
 
@@ -2098,6 +2275,7 @@ function renderBalanceForecastSection() {
 
 // מציגות את הכל פעם אחת כשהעמוד נטען
 document.getElementById("current-month-label").textContent = getCurrentMonthLabel();
+renderIncomeSources();
 renderSavingsGoals();
 renderHistoryTable();
 renderDashboard();

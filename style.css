@@ -607,6 +607,51 @@ body {
   color: var(--color-expenses);
 }
 
+/* מקורות הכנסה - משתמשים ב-.goal-card/.goal-header/.goal-name הקיימים לכרטיס עצמו,
+   ורק מוסיפים את הכפתור השני (עריכה) ליד כפתור המחיקה הקיים, וסכום המקור מתחת לשם */
+.income-source-actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex-shrink: 0;
+}
+
+.income-source-edit {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 15px;
+  color: #9ca3af;
+  padding: 4px;
+  transition: color 0.15s ease;
+}
+
+.income-source-edit:hover {
+  color: var(--color-primary);
+}
+
+.income-source-amount {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--color-income);
+}
+
+.income-sources-total {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid var(--color-border);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.income-sources-total-value {
+  font-size: 20px;
+  color: var(--color-income);
+}
+
 .progress-bar-track {
   background-color: #e5e7eb;
   border-radius: 8px;
@@ -959,7 +1004,8 @@ body {
   }
 
   .goal-delete,
-  .history-delete {
+  .history-delete,
+  .income-source-edit {
     min-width: 40px;
     min-height: 40px;
     font-size: 17px;
