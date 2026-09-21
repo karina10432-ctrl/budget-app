@@ -285,6 +285,9 @@ function renderDashboard() {
   // ואת שני הגרפים (שלב 15) - מאותה הסיבה בדיוק, ובאותה נקודת חיבור יחידה
   renderExpenseBreakdownChart();
   renderBudgetComparisonChart();
+
+  // וגם את כרטיס "לאן הכסף הולך החודש" ב-Home (שלב UI-2d) - אותה סיבה, אותה נקודת חיבור
+  renderHomeExpenseBreakdown();
 }
 
 // מחזירה כמה ימים יש בסך הכל בחודש הנוכחי, ומה היום הנוכחי בחודש (1-31)
@@ -499,6 +502,69 @@ function renderExpenseBreakdownChart() {
     row.appendChild(amountSpan);
     listContainer.appendChild(row);
   });
+}
+
+// כמה קטגוריות להציג לכל היותר בכרטיס הקומפקטי "לאן הכסף הולך החודש" ב-Home (UI-2d),
+// לפני שמציגות שורת "+ עוד X קטגוריות" - כדי שהכרטיס לא יתפח לכרטיס ענק
+const HOME_EXPENSE_BREAKDOWN_LIMIT = 5;
+
+// מציגה בכרטיס הקומפקטי של Home את פירוט ההוצאות לפי קטגוריה (שלב UI-2d) - קריאה-בלבד,
+// לא שומרת שום נתון. משתמשת אך ורק בתוצאה של getExpenseCategoryList() הקיימת (אותה
+// פונקציה שכבר מזינה את גרף הדונאט למעלה) - לא מחשבת קטגוריות/אחוזים מהתחלה בעצמה,
+// רק גוזרת אחוז תצוגה מהסכומים שהיא כבר החזירה. זו לא "הוצאות אחרונות" - אין כאן תאריכים,
+// כי המבנה הקיים (expensesFixed/expensesVariable) לא שומר הוצאות בודדות עם תאריך.
+function renderHomeExpenseBreakdown() {
+  const container = document.getElementById("home-expense-breakdown-list");
+  container.innerHTML = "";
+
+  const categories = getExpenseCategoryList();
+
+  if (categories.length === 0) {
+    container.innerHTML = '<div class="cashflow-empty">אין עדיין הוצאות להצגה החודש</div>';
+    return;
+  }
+
+  const total = categories.reduce((sum, cat) => sum + cat.amount, 0);
+  const topCategories = categories.slice(0, HOME_EXPENSE_BREAKDOWN_LIMIT);
+
+  topCategories.forEach((cat) => {
+    const percent = Math.round((cat.amount / total) * 100);
+
+    const row = document.createElement("div");
+    row.className = "budget-compare-row";
+
+    const headerDiv = document.createElement("div");
+    headerDiv.className = "budget-compare-header";
+
+    const nameSpan = document.createElement("span");
+    nameSpan.textContent = cat.icon + " " + cat.label;
+
+    const amountSpan = document.createElement("span");
+    amountSpan.className = "budget-compare-amounts";
+    amountSpan.textContent = formatMoney(cat.amount) + " · " + percent + "%";
+
+    headerDiv.appendChild(nameSpan);
+    headerDiv.appendChild(amountSpan);
+    row.appendChild(headerDiv);
+
+    const track = document.createElement("div");
+    track.className = "progress-bar-track";
+    const fill = document.createElement("div");
+    fill.className = "progress-bar-fill";
+    fill.style.width = percent + "%";
+    track.appendChild(fill);
+    row.appendChild(track);
+
+    container.appendChild(row);
+  });
+
+  const remainingCount = categories.length - topCategories.length;
+  if (remainingCount > 0) {
+    const moreNote = document.createElement("div");
+    moreNote.className = "cashflow-empty";
+    moreNote.textContent = "+ עוד " + remainingCount + " קטגוריות";
+    container.appendChild(moreNote);
+  }
 }
 
 // מחזירה את כל הקטגוריות המשתנות (רק אלה - התקציבים קיימים רק עבורן, בדיוק כמו בטבלת
@@ -2683,6 +2749,7 @@ document.querySelectorAll("#more-nav-overlay .quick-action-item").forEach((btn) 
 
 // מציגות את הכל פעם אחת כשהעמוד נטען
 document.getElementById("current-month-label").textContent = getCurrentMonthLabel();
+document.getElementById("home-month-label").textContent = getCurrentMonthLabel(); // כותרת Home (UI-2a) - אותה פונקציה קיימת, לא חישוב תאריך חדש
 populateQuickExpenseCategoryOptions();
 renderIncomeSources();
 renderQuickExpenses();

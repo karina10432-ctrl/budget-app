@@ -56,96 +56,194 @@
 
   <main class="app-main">
 
-    <!-- ה-Dashboard: 4 כרטיסים שמראים את התמונה הכללית -->
-    <section class="dashboard" id="dashboard-section">
+    <!-- ===== Home (שלב UI-2a) =====
+         עטיפה חדשה סביב ה-Dashboard הקיים: כותרת Home (ברכה קבועה + החודש הנוכחי) מעל
+         4 כרטיסי הסיכום העיקריים, ואחריהם שני הכרטיסים הנוספים הקיימים ("מותר להוציא
+         היום" / "יתרה נוכחית") - לא הוסרו, רק ממוקמים אחרי הכרטיסים העיקריים.
+         id="dashboard-section" עבר לעטיפה החיצונית (כדי שניווט UI-1 - "בית" בעליון
+         ובתחתון - ימשיך לעבוד בלי לגעת בו). כל id/class של הכרטיסים עצמם נשאר בדיוק
+         כפי שהיה, כך ש-renderDashboard()/renderSpendingLimitCard() ממשיכות לעבוד
+         בלי שום שינוי. -->
+    <section class="home-screen" id="dashboard-section">
 
-      <div class="card card-income">
-        <div class="card-icon">💰</div>
-        <div class="card-label">הכנסה חודשית</div>
-        <div class="card-value" id="income-value">₪0</div>
+      <div class="home-header">
+        <p class="home-greeting">שלום! 👋</p>
+        <h2 class="home-month" id="home-month-label"></h2>
       </div>
 
-      <div class="card card-expenses">
-        <div class="card-icon">💸</div>
-        <div class="card-label">הוצאות</div>
-        <div class="card-value" id="expenses-value">₪0</div>
-        <!-- שורה קטנה שמראה כמה מההוצאות קבועות וכמה משתנות -->
-        <div class="card-breakdown" id="expenses-breakdown">קבועות ₪0 · משתנות ₪0</div>
-      </div>
+      <!-- 4 כרטיסי הסיכום העיקריים של Home -->
+      <div class="dashboard">
 
-      <div class="card card-savings">
-        <div class="card-icon">🏦</div>
-        <div class="card-label">חיסכון</div>
-        <div class="card-value" id="savings-value">₪0</div>
-      </div>
-
-      <div class="card card-remaining">
-        <div class="card-icon">📊</div>
-        <div class="card-label">נשאר</div>
-        <div class="card-value" id="remaining-value">₪0</div>
-      </div>
-
-      <!-- כרטיס "מותר להוציא היום" - מתמלא ע"י renderSpendingLimitCard() ב-script.js -->
-      <div class="card card-spending-limit" id="spending-limit-card">
-        <div class="card-icon">💸</div>
-        <div class="card-label">מותר להוציא היום</div>
-        <div class="card-value" id="spending-limit-value">₪0</div>
-        <div class="card-breakdown" id="spending-limit-breakdown"></div>
-      </div>
-
-      <!-- כרטיס "יתרה נוכחית" - ערך שמוזנת ידנית, ולא מחושב אוטומטית מהכנסות/הוצאות -->
-      <div class="card card-balance" id="balance-card">
-        <div class="card-icon">🏦</div>
-        <div class="card-label">יתרה נוכחית</div>
-        <div class="card-value" id="balance-value">₪0</div>
-        <div class="balance-edit-row">
-          <input type="number" id="balance-input" min="0" placeholder="עדכני יתרה">
-          <button type="button" id="balance-save-button" class="secondary-button">שמור</button>
+        <div class="card card-income">
+          <div class="card-icon">💰</div>
+          <div class="card-label">הכנסה חודשית</div>
+          <div class="card-value" id="income-value">₪0</div>
         </div>
+
+        <div class="card card-expenses">
+          <div class="card-icon">💸</div>
+          <div class="card-label">הוצאות</div>
+          <div class="card-value" id="expenses-value">₪0</div>
+          <!-- שורה קטנה שמראה כמה מההוצאות קבועות וכמה משתנות -->
+          <div class="card-breakdown" id="expenses-breakdown">קבועות ₪0 · משתנות ₪0</div>
+        </div>
+
+        <div class="card card-savings">
+          <div class="card-icon">🏦</div>
+          <div class="card-label">חיסכון</div>
+          <div class="card-value" id="savings-value">₪0</div>
+        </div>
+
+        <div class="card card-remaining">
+          <div class="card-icon">📊</div>
+          <div class="card-label">נשאר</div>
+          <div class="card-value" id="remaining-value">₪0</div>
+        </div>
+
       </div>
 
-    </section>
+      <!-- שני הכרטיסים הנוספים הקיימים - לא חלק מ-4 כרטיסי הסיכום הרשמיים של Home,
+           אבל לא נמחקו ולא שוכפלו, רק ממוקמים מתחתיהם -->
+      <div class="dashboard">
 
-    <!-- מרכז שליטה חודשי - תצוגה מרוכזת של מצב החודש הנוכחי. כולה תצוגה בלבד -
-         כל הנתונים מגיעים מהחישובים הקיימים באפליקציה (הכנסה/הוצאות/חיסכון/נשאר/תקציבים/ימי החודש),
-         ולא נוצר כאן שום חישוב כספי מקביל. -->
-    <section class="card form-card" id="month-summary-card">
-      <h2 class="form-title">📊 סיכום החודש</h2>
+        <!-- כרטיס "מותר להוציא היום" - מתמלא ע"י renderSpendingLimitCard() ב-script.js -->
+        <div class="card card-spending-limit" id="spending-limit-card">
+          <div class="card-icon">💸</div>
+          <div class="card-label">מותר להוציא היום</div>
+          <div class="card-value" id="spending-limit-value">₪0</div>
+          <div class="card-breakdown" id="spending-limit-breakdown"></div>
+        </div>
 
-      <div class="cashflow-summary">
-        <div class="cashflow-summary-item">
-          <div class="cashflow-summary-label">💰 הכנסות בפועל</div>
-          <div class="cashflow-summary-value income" id="month-summary-income">₪0</div>
+        <!-- כרטיס "יתרה נוכחית" - ערך שמוזנת ידנית, ולא מחושב אוטומטית מהכנסות/הוצאות -->
+        <div class="card card-balance" id="balance-card">
+          <div class="card-icon">🏦</div>
+          <div class="card-label">יתרה נוכחית</div>
+          <div class="card-value" id="balance-value">₪0</div>
+          <div class="balance-edit-row">
+            <input type="number" id="balance-input" min="0" placeholder="עדכני יתרה">
+            <button type="button" id="balance-save-button" class="secondary-button">שמור</button>
+          </div>
         </div>
-        <div class="cashflow-summary-item">
-          <div class="cashflow-summary-label">💸 הוצאות בפועל</div>
-          <div class="cashflow-summary-value expense" id="month-summary-expenses">₪0</div>
-        </div>
-        <div class="cashflow-summary-item">
-          <div class="cashflow-summary-label">💾 חיסכון</div>
-          <div class="cashflow-summary-value savings" id="month-summary-savings">₪0</div>
-        </div>
-        <div class="cashflow-summary-item">
-          <div class="cashflow-summary-label">💳 נשאר להוצאות</div>
-          <div class="cashflow-summary-value" id="month-summary-remaining">₪0</div>
-        </div>
+
       </div>
 
-      <div class="month-progress-row">
-        <div class="month-progress-label" id="month-days-label">📅 עברו 0 מתוך 0 ימים</div>
-        <div class="progress-bar-track">
-          <div class="progress-bar-fill" id="month-days-progress-fill" style="width: 0%"></div>
+      <!-- מרכז שליטה חודשי (הועבר מתוך Home, שלב UI-2b) - תצוגה מרוכזת של מצב החודש
+           הנוכחי. כולה תצוגה בלבד - כל הנתונים מגיעים מהחישובים הקיימים באפליקציה
+           (הכנסה/הוצאות/חיסכון/נשאר/תקציבים/ימי החודש) דרך renderMonthSummaryCard()
+           הקיימת ללא שום שינוי. id-ים (כולל id="month-summary-card" עצמו) לא השתנו -
+           האלמנט רק הועבר במסמך, לא שוכפל. class="home-status-card" נוסף רק לצורך
+           עיצוב (ר' style.css) - לא נוגע בלוגיקה. -->
+      <section class="card form-card home-status-card" id="month-summary-card">
+        <h2 class="form-title">📊 סיכום החודש</h2>
+
+        <div class="cashflow-summary">
+          <div class="cashflow-summary-item">
+            <div class="cashflow-summary-label">💰 הכנסות בפועל</div>
+            <div class="cashflow-summary-value income" id="month-summary-income">₪0</div>
+          </div>
+          <div class="cashflow-summary-item">
+            <div class="cashflow-summary-label">💸 הוצאות בפועל</div>
+            <div class="cashflow-summary-value expense" id="month-summary-expenses">₪0</div>
+          </div>
+          <div class="cashflow-summary-item">
+            <div class="cashflow-summary-label">💾 חיסכון</div>
+            <div class="cashflow-summary-value savings" id="month-summary-savings">₪0</div>
+          </div>
+          <div class="cashflow-summary-item">
+            <div class="cashflow-summary-label">💳 נשאר להוצאות</div>
+            <div class="cashflow-summary-value" id="month-summary-remaining">₪0</div>
+          </div>
         </div>
+
+        <div class="month-progress-row">
+          <div class="month-progress-label" id="month-days-label">📅 עברו 0 מתוך 0 ימים</div>
+          <div class="progress-bar-track">
+            <div class="progress-bar-fill" id="month-days-progress-fill" style="width: 0%"></div>
+          </div>
+        </div>
+
+        <div class="month-progress-row">
+          <div class="month-progress-label" id="month-budget-label">🎯 ניצול תקציב ההוצאות</div>
+          <div class="progress-bar-track">
+            <div class="progress-bar-fill" id="month-budget-progress-fill" style="width: 0%"></div>
+          </div>
+        </div>
+
+        <div class="month-pace-line" id="month-pace-line"></div>
+      </section>
+
+      <!-- הוצאות מהירות + יעדי חיסכון (הועברו לתוך Home, שלב UI-2c) - שני הסקשנים
+           המקוריים במלואם, רק הועברו (לא שוכפלו) ועטופים ב-.charts-row הקיימת כדי
+           לקבל בדיוק את אותה התנהגות רספונסיבית שכבר משמשת את הגרפים למעלה: זה לצד
+           זה ב-desktop, נערמים אנכית במובייל - בלי CSS חדש. id-ים (quick-expenses-list,
+           add-quick-expense-button, goals-section, goal-form, goals-list וכו') לא השתנו,
+           כך ש-renderQuickExpenses()/renderSavingsGoals() ממשיכות לעבוד ללא שינוי. -->
+      <div class="charts-row">
+
+        <!-- הוצאות מהירות - קיצורי דרך אישיים להוספת הוצאה רגילה בלחיצה אחת, בלי למלא
+             מחדש את טופס ההוצאות. לחיצה על "+" רק מוסיפה את הסכום לקטגוריה הקיימת
+             ב-expensesFixed/expensesVariable - לא יוצרת מערכת הוצאות מקבילה. -->
+        <section class="card form-card charts-row-item">
+          <h2 class="form-title">⚡ הוצאות מהירות</h2>
+
+          <!-- הרשימה הזו מתמלאת ע"י JavaScript (renderQuickExpenses) -->
+          <div class="goals-list" id="quick-expenses-list"></div>
+
+          <button type="button" id="add-quick-expense-button" class="secondary-button" style="margin-top: 10px;">
+            + הוסף הוצאה מהירה
+          </button>
+        </section>
+
+        <!-- מטרות חיסכון -->
+        <section class="card form-card charts-row-item" id="goals-section">
+          <h2 class="form-title">🏆 מטרות חיסכון</h2>
+
+          <form id="goal-form">
+            <div class="form-row">
+              <label for="goal-name">שם המטרה (אפשר גם עם אימוג'י, למשל ✈️ טיול)</label>
+              <input type="text" id="goal-name" placeholder="לדוגמה: ✈️ טיול לאיטליה">
+            </div>
+
+            <div class="expenses-grid">
+              <div class="form-row">
+                <label for="goal-target">סכום יעד</label>
+                <input type="number" id="goal-target" min="0" placeholder="0">
+              </div>
+              <div class="form-row">
+                <label for="goal-saved">כבר נחסך</label>
+                <input type="number" id="goal-saved" min="0" placeholder="0">
+              </div>
+              <div class="form-row">
+                <label for="goal-monthly">הפקדה חודשית מתוכננת</label>
+                <input type="number" id="goal-monthly" min="0" placeholder="0">
+              </div>
+              <div class="form-row">
+                <label for="goal-target-date">תאריך יעד (לא חובה)</label>
+                <input type="date" id="goal-target-date">
+              </div>
+            </div>
+
+            <button type="submit">הוסף מטרה</button>
+          </form>
+
+          <!-- כאן ייכנסו כרטיסי המטרות, שנוצרים דינמית ע"י JavaScript -->
+          <div class="goals-list" id="goals-list"></div>
+        </section>
+
       </div>
 
-      <div class="month-progress-row">
-        <div class="month-progress-label" id="month-budget-label">🎯 ניצול תקציב ההוצאות</div>
-        <div class="progress-bar-track">
-          <div class="progress-bar-fill" id="month-budget-progress-fill" style="width: 0%"></div>
-        </div>
-      </div>
+      <!-- "לאן הכסף הולך החודש" (שלב UI-2d, אחרון ב-UI-2) - תצוגה קומפקטית של פירוט
+           ההוצאות לפי קטגוריה בלבד. לא "הוצאות אחרונות"/transaction history - אין
+           לנו תאריך לכל הוצאה (expensesFixed/expensesVariable הם סכומי-קטגוריה, לא
+           רשומות בודדות), אז אין כאן שום טענת "אחרונות". מבוססת אך ורק על התוצאה של
+           getExpenseCategoryList() הקיימת (אותה פונקציה שכבר מזינה את גרף הדונאט
+           למעלה) - לא מחשבת קטגוריות בעצמה. מתמלאת ע"י renderHomeExpenseBreakdown()
+           החדשה (script.js), קריאה-בלבד, לא שומרת כלום. -->
+      <section class="card form-card">
+        <h2 class="form-title">🥧 לאן הכסף הולך החודש</h2>
+        <div id="home-expense-breakdown-list"></div>
+      </section>
 
-      <div class="month-pace-line" id="month-pace-line"></div>
     </section>
 
     <!-- גרפים ויזואליים להוצאות - תצוגה בלבד, מבוססת על הנתונים הקיימים (expensesFixed/
@@ -185,20 +283,6 @@
         <span>סה"כ הכנסות</span>
         <span class="income-sources-total-value" id="income-sources-total-value">₪0</span>
       </div>
-    </section>
-
-    <!-- הוצאות מהירות - קיצורי דרך אישיים להוספת הוצאה רגילה בלחיצה אחת, בלי למלא מחדש
-         את טופס ההוצאות. לחיצה על "+" רק מוסיפה את הסכום לקטגוריה הקיימת ב-expensesFixed/
-         expensesVariable - זה לא יוצר מערכת הוצאות מקבילה, רק קיצור דרך למה שכבר קיים. -->
-    <section class="card form-card">
-      <h2 class="form-title">⚡ הוצאות מהירות</h2>
-
-      <!-- הרשימה הזו מתמלאת ע"י JavaScript (renderQuickExpenses) -->
-      <div class="goals-list" id="quick-expenses-list"></div>
-
-      <button type="button" id="add-quick-expense-button" class="secondary-button" style="margin-top: 10px;">
-        + הוסף הוצאה מהירה
-      </button>
     </section>
 
     <!-- טופס עדכון הוצאות -->
@@ -343,42 +427,6 @@
         </thead>
         <tbody id="budget-table-body"></tbody>
       </table>
-    </section>
-
-    <!-- מטרות חיסכון -->
-    <section class="card form-card" id="goals-section">
-      <h2 class="form-title">🏆 מטרות חיסכון</h2>
-
-      <form id="goal-form">
-        <div class="form-row">
-          <label for="goal-name">שם המטרה (אפשר גם עם אימוג'י, למשל ✈️ טיול)</label>
-          <input type="text" id="goal-name" placeholder="לדוגמה: ✈️ טיול לאיטליה">
-        </div>
-
-        <div class="expenses-grid">
-          <div class="form-row">
-            <label for="goal-target">סכום יעד</label>
-            <input type="number" id="goal-target" min="0" placeholder="0">
-          </div>
-          <div class="form-row">
-            <label for="goal-saved">כבר נחסך</label>
-            <input type="number" id="goal-saved" min="0" placeholder="0">
-          </div>
-          <div class="form-row">
-            <label for="goal-monthly">הפקדה חודשית מתוכננת</label>
-            <input type="number" id="goal-monthly" min="0" placeholder="0">
-          </div>
-          <div class="form-row">
-            <label for="goal-target-date">תאריך יעד (לא חובה)</label>
-            <input type="date" id="goal-target-date">
-          </div>
-        </div>
-
-        <button type="submit">הוסף מטרה</button>
-      </form>
-
-      <!-- כאן ייכנסו כרטיסי המטרות, שנוצרים דינמית ע"י JavaScript -->
-      <div class="goals-list" id="goals-list"></div>
     </section>
 
     <!-- מעקב חודשי + היסטוריה -->

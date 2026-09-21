@@ -69,10 +69,46 @@ body {
 }
 
 /* ה-Dashboard: רשת (grid) שמסדרת את הכרטיסים בשורה, ועוברת אוטומטית לעמודה אחת במובייל */
+/* כותרת Home (שלב UI-2a) - ברכה קבועה + החודש הנוכחי (מוצג ע"י JS דרך getCurrentMonthLabel()
+   הקיימת, בדיוק כמו "החודש הנוכחי" בהיסטוריה החודשית למטה - אין כאן חישוב תאריך חדש).
+   גדלי הגופן/הצבעים זהים במכוון לסולם הטיפוגרפי הקיים של .app-header/.app-subtitle. */
+.home-header {
+  text-align: center;
+  margin-bottom: 4px;
+}
+
+.home-greeting {
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.home-month {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--color-text-muted);
+  margin-top: 4px;
+}
+
 .dashboard {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
   gap: 16px;
+}
+
+/* "סטטוס החודש" בתוך Home (שלב UI-2b) - שיפור ויזואלי בלבד ל-month-summary-card הקיים,
+   כדי שירגיש כמו כרטיס אינפורמטיבי בתוך Home ולא כמו טופס. לא נוגע ב-.cashflow-summary/
+   .month-pace-line/מצבי ה-pace הקיימים (צבע/רקע), ולא בטקסט או בחישוב שקובע אותם. */
+.home-status-card {
+  text-align: center;
+}
+
+.home-status-card .form-title {
+  justify-content: center;
+}
+
+.home-status-card .month-pace-line {
+  font-weight: 600;
 }
 
 .card {
