@@ -28,6 +28,25 @@
 </head>
 <body>
 
+  <!-- ===== App Shell: ניווט עליון (Desktop) - שלב UI-1 =====
+       שכבת ניווט חדשה מעל התוכן הקיים. לא מזיזה/מסתירה אף סקשן קיים - כל כפתור פשוט גולל
+       (scrollIntoView) אל ה-section המתאים, שכבר קיים בעמוד. "בית" מסומן כפעיל כברירת מחדל,
+       וה-active עובר בקליק (לא scroll-spy) - זה עדיין אותו עמוד רציף אחד, לא views אמיתיים. -->
+  <nav class="app-navbar" aria-label="ניווט ראשי">
+    <div class="app-navbar-inner">
+      <span class="app-navbar-brand">Budget App</span>
+      <div class="app-navbar-links">
+        <button type="button" class="nav-link active" data-scroll-target="dashboard-section">🏠 בית</button>
+        <button type="button" class="nav-link" data-scroll-target="expenses-section">💸 הוצאות</button>
+        <button type="button" class="nav-link" data-scroll-target="income-section">💰 הכנסות</button>
+        <button type="button" class="nav-link" data-scroll-target="budgets-section">🎯 תקציב וחיסכון</button>
+        <button type="button" class="nav-link" data-scroll-target="analysis-section">📊 ניתוח</button>
+        <button type="button" class="nav-link" data-scroll-target="calendar-card">📅 לוח שנה</button>
+        <button type="button" class="nav-link" data-scroll-target="settings-section">⚙️ הגדרות</button>
+      </div>
+    </div>
+  </nav>
+
   <header class="app-header">
     <div class="app-header-inner">
       <h1>💰 ניהול תקציב אישי</h1>
@@ -38,7 +57,7 @@
   <main class="app-main">
 
     <!-- ה-Dashboard: 4 כרטיסים שמראים את התמונה הכללית -->
-    <section class="dashboard">
+    <section class="dashboard" id="dashboard-section">
 
       <div class="card card-income">
         <div class="card-icon">💰</div>
@@ -132,7 +151,7 @@
     <!-- גרפים ויזואליים להוצאות - תצוגה בלבד, מבוססת על הנתונים הקיימים (expensesFixed/
          expensesVariable/budgets). לא נוצר כאן שום מנגנון שמירה חדש. בלי ספריות חיצוניות -
          הגרפים הם SVG/HTML/CSS טהורים, כך שהאפליקציה ממשיכה לעבוד לגמרי offline. -->
-    <div class="charts-row">
+    <div class="charts-row" id="analysis-section">
 
       <section class="card form-card charts-row-item" id="expense-breakdown-card">
         <h2 class="form-title">🥧 לאן הכסף הולך?</h2>
@@ -152,7 +171,7 @@
     </div>
 
     <!-- מקורות הכנסה - רשימה חופשית (משכורות, פרילנס, שכירות וכו'), כל אחד עם שם וסכום -->
-    <section class="card form-card">
+    <section class="card form-card" id="income-section">
       <h2 class="form-title">💰 מקורות הכנסה</h2>
 
       <!-- הרשימה הזו מתמלאת ע"י JavaScript (renderIncomeSources) -->
@@ -184,7 +203,7 @@
 
     <!-- טופס עדכון הוצאות -->
     <!-- שדה נפרד לכל קטגוריה, בכל שדה מזינים את הסכום הכולל שהוצאת בקטגוריה הזו החודש -->
-    <section class="card form-card">
+    <section class="card form-card" id="expenses-section">
       <h2 class="form-title">💸 עדכון הוצאות חודשיות</h2>
 
       <form id="expenses-form">
@@ -270,7 +289,7 @@
     </section>
 
     <!-- תקציבים חודשיים - רק להוצאות המשתנות -->
-    <section class="card form-card">
+    <section class="card form-card" id="budgets-section">
       <h2 class="form-title">🎯 תקציבים חודשיים (הוצאות משתנות)</h2>
 
       <form id="budgets-form">
@@ -327,7 +346,7 @@
     </section>
 
     <!-- מטרות חיסכון -->
-    <section class="card form-card">
+    <section class="card form-card" id="goals-section">
       <h2 class="form-title">🏆 מטרות חיסכון</h2>
 
       <form id="goal-form">
@@ -484,7 +503,7 @@
     </section>
 
     <!-- גיבוי נתונים: ייצוא וייבוא של כל המידע כקובץ JSON -->
-<section class="card form-card">
+<section class="card form-card" id="settings-section">
       <h2 class="form-title">💾 גיבוי נתונים</h2>
 
       <p class="current-month">
@@ -503,6 +522,57 @@
     </section>
 
   </main>
+
+  <!-- ===== App Shell: ניווט תחתון (Mobile) - שלב UI-1 =====
+       מוצג רק במסכים צרים (ר' style.css). "+" באמצע פותח תפריט "מה תרצי להוסיף?",
+       "עוד" פותח תפריט קטן עם שאר יעדי הניווט שלא נכנסים לשורה התחתונה. -->
+  <nav class="bottom-nav" aria-label="ניווט תחתון">
+    <button type="button" class="bottom-nav-link active" data-scroll-target="dashboard-section">
+      <span class="bottom-nav-icon">🏠</span><span class="bottom-nav-label">בית</span>
+    </button>
+    <button type="button" class="bottom-nav-link" data-scroll-target="expenses-section">
+      <span class="bottom-nav-icon">💸</span><span class="bottom-nav-label">הוצאות</span>
+    </button>
+    <button type="button" class="bottom-nav-fab" id="quick-actions-button" aria-label="הוספה מהירה">
+      <span>＋</span>
+    </button>
+    <button type="button" class="bottom-nav-link" data-scroll-target="analysis-section">
+      <span class="bottom-nav-icon">📊</span><span class="bottom-nav-label">ניתוח</span>
+    </button>
+    <button type="button" class="bottom-nav-link" id="more-nav-button" aria-label="תפריט נוסף">
+      <span class="bottom-nav-icon">⚙️</span><span class="bottom-nav-label">עוד</span>
+    </button>
+  </nav>
+
+  <!-- מודאל "מה תרצי להוסיף?" - נפתח מכפתור ה-"+" בניווט התחתון. בשלב הזה מחובר לפעולות
+       הקיימות (openAddIncomeSourceModal/openAddQuickExpenseModal) או גלילה+פוקוס לטופס
+       הקיים המתאים - לא נוצר כאן שום טופס/מודאל הוספה חדש. -->
+  <div class="modal-overlay" id="quick-actions-overlay" style="display: none;">
+    <div class="modal-box quick-actions-box">
+      <button type="button" class="modal-close-button" id="quick-actions-close-button" aria-label="סגור">×</button>
+      <h3>מה תרצי להוסיף?</h3>
+      <div class="quick-actions-list">
+        <button type="button" class="quick-action-item" id="quick-action-expense">💸 הוצאה</button>
+        <button type="button" class="quick-action-item" id="quick-action-income">💰 הכנסה</button>
+        <button type="button" class="quick-action-item" id="quick-action-quick-expense">⚡ הוצאה מהירה</button>
+        <button type="button" class="quick-action-item" id="quick-action-goal">🎯 יעד חיסכון</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- מודאל "עוד" - יעדי הניווט שלא נכנסים לניווט התחתון הקומפקטי -->
+  <div class="modal-overlay" id="more-nav-overlay" style="display: none;">
+    <div class="modal-box quick-actions-box">
+      <button type="button" class="modal-close-button" id="more-nav-close-button" aria-label="סגור">×</button>
+      <h3>עוד</h3>
+      <div class="quick-actions-list">
+        <button type="button" class="quick-action-item" data-scroll-target="income-section">💰 הכנסות</button>
+        <button type="button" class="quick-action-item" data-scroll-target="budgets-section">🎯 תקציב וחיסכון</button>
+        <button type="button" class="quick-action-item" data-scroll-target="calendar-card">📅 לוח שנה</button>
+        <button type="button" class="quick-action-item" data-scroll-target="settings-section">⚙️ הגדרות</button>
+      </div>
+    </div>
+  </div>
 
   <!-- מודאל (חלון קופץ) להוספה או עריכה של אירוע בלוח השנה הפיננסי -->
   <div class="modal-overlay" id="event-modal-overlay" style="display: none;">

@@ -1205,3 +1205,226 @@ body {
     padding-top: 8px;
   }
 }
+
+/* ===== App Shell: Navbar (Desktop) + Bottom Navigation (Mobile) - שלב UI-1 =====
+   שכבת ניווט חדשה בלבד, מסביב לתוכן הקיים - לא נוגעת בשום card/section/form/צבע/גופן קיים.
+   הבחירה בין navbar עליון ל-bottom navigation נעשית לפי רוחב המסך (768px), בדיוק כמו שאר
+   ההתאמות הרספונסיביות באפליקציה - לא נוגעת בשני ה-media queries הקיימים למעלה (480px/640px). */
+
+.app-navbar {
+  display: none;
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  background-color: var(--color-card);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.app-navbar-inner {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 14px 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  /* בלי flex-wrap כאן: ה-brand וה-links נשארים תמיד באותה שורה (ה-brand קבוע בקצה עם
+     flex-shrink:0). אם צריך, ה-links עצמם גולשים לשורה פנימית נוספת (ר' flex-wrap
+     ב-.app-navbar-links למטה) - כך שאין מצב שבו ה-brand "נזרק" לשורה נפרדלמטה */
+}
+
+.app-navbar-brand {
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--color-text);
+  flex-shrink: 0;
+  /* ב-RTL, "תחילת" ה-flex (order הנמוך ביותר) היא בצד ימין - ה-order הגבוה יותר כאן
+     (לעומת .app-navbar-links) דוחף את המותג לצד שמאל, בלי לגעת ב-direction/HTML/JS,
+     ובלי להשפיע על סדר הקריאה הטבעי (RTL) של הקישורים עצמם בתוך app-navbar-links */
+  order: 2;
+}
+
+.app-navbar-links {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: wrap;
+  order: 1;
+}
+
+.nav-link {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 13.5px;
+  color: var(--color-text-muted);
+  padding: 8px 8px;
+  border-radius: 999px;
+  transition: background-color 0.15s ease, color 0.15s ease;
+  white-space: nowrap;
+}
+
+.nav-link:hover {
+  background-color: var(--color-bg);
+  color: var(--color-text);
+}
+
+.nav-link.active {
+  background-color: #eef2ff;
+  color: var(--color-primary);
+  font-weight: 600;
+}
+
+/* Bottom Navigation - מוצג רק במובייל (ר' media query בסוף הקובץ) */
+.bottom-nav {
+  display: flex;
+  position: fixed;
+  right: 0;
+  left: 0;
+  bottom: 0;
+  z-index: 50;
+  background-color: var(--color-card);
+  border-top: 1px solid var(--color-border);
+  padding: 6px 8px calc(6px + env(safe-area-inset-bottom, 0px));
+  align-items: center;
+  justify-content: space-around;
+}
+
+.bottom-nav-link {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 4px 8px;
+  border-radius: var(--radius-md);
+  color: var(--color-text-muted);
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.bottom-nav-link:hover,
+.bottom-nav-link.active {
+  color: var(--color-primary);
+}
+
+.bottom-nav-link.active {
+  background-color: #eef2ff;
+}
+
+.bottom-nav-icon {
+  font-size: 19px;
+  line-height: 1;
+}
+
+.bottom-nav-label {
+  font-size: 10.5px;
+  font-weight: 600;
+}
+
+/* כפתור ה-"+" המרכזי - קצת בולט יותר, בדיוק כמו שהתבקש */
+.bottom-nav-fab {
+  background-color: var(--color-primary);
+  color: #ffffff;
+  border: none;
+  border-radius: 50%;
+  width: 50px;
+  height: 50px;
+  min-width: 44px;
+  min-height: 44px;
+  font-size: 24px;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: -14px;
+  flex-shrink: 0;
+  box-shadow: 0 4px 10px rgba(79, 70, 229, 0.35);
+  transition: background-color 0.15s ease;
+}
+
+.bottom-nav-fab:hover {
+  background-color: var(--color-primary-dark);
+}
+
+/* מודאל "מה תרצי להוסיף?" / "עוד" - בנוי על .modal-overlay/.modal-box הקיימים לגמרי,
+   רק עם תוכן פנימי משלו (רשימת פעולות + כפתור סגירה) */
+.quick-actions-box {
+  position: relative;
+  text-align: center;
+}
+
+.quick-actions-box h3 {
+  margin-bottom: 16px;
+}
+
+.quick-actions-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.quick-action-item {
+  background-color: var(--color-bg);
+  border: none;
+  border-radius: var(--radius-md);
+  padding: 14px 16px;
+  font-family: inherit;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--color-text);
+  cursor: pointer;
+  text-align: right;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.quick-action-item:hover {
+  background-color: #eef2ff;
+  color: var(--color-primary);
+}
+
+.modal-close-button {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  background: none;
+  border: none;
+  font-size: 22px;
+  line-height: 1;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  padding: 6px;
+}
+
+.modal-close-button:hover {
+  color: var(--color-text);
+}
+
+/* מ-768px ומעלה: navbar עליון, בלי bottom navigation. מתחת ל-768px: להפך.
+   768px נבחר כי זה הגבול המקובל בין "מסך מגע צר" ל"מסך רחב עם עכבר", וגם אחד
+   מרוחבי הבדיקה הרספונסיבית שהוגדרו לשלב הזה. */
+@media (min-width: 768px) {
+  .app-navbar {
+    display: block;
+  }
+  .bottom-nav {
+    display: none;
+  }
+}
+
+/* מרווח נוסף בתחתית התוכן כשה-bottom navigation מוצג, כדי שהוא לא יכסה את הסקשן האחרון בעמוד.
+   ממוקם בסוף הקובץ כדי לגבור בבטחה על padding-bottom הקיים של .app-main (גם הכללי וגם זה
+   שבתוך @media (max-width: 480px) למעלה) - בלי לשנות אף ערך אחר שלו (margin/padding-top/צדדים). */
+@media (max-width: 767px) {
+  .app-main {
+    padding-bottom: 96px;
+  }
+}

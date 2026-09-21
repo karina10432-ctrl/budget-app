@@ -2584,6 +2584,103 @@ function renderBalanceForecastSection() {
   }
 }
 
+// ===== App Shell: ניווט עליון/תחתון + Quick Actions (שלב UI-1) =====
+// זה שלב UI בלבד: כל כפתור ניווט רק גולל (scrollIntoView) אל section קיים בעמוד, ומסמן
+// את עצמו כ"פעיל". זה עדיין אותו עמוד רציף אחד - לא נבנה כאן מנגנון views/routing אמיתי,
+// ולא נוצר/נמחק/שונה שום נתון, חישוב, או פונקציית render קיימת. הפעולות ב"מה תרצי להוסיף?"
+// מחוברות לפונקציות הקיימות (openAddIncomeSourceModal/openAddQuickExpenseModal) בלבד,
+// או לגלילה+פוקוס לטופס הקיים - בלי שום טופס/מודאל הוספה חדש.
+
+// גוללת בעדינות אל ה-section עם ה-id הנתון (אם קיים), ומסמנת את כל כפתורי הניווט
+// (עליון ותחתון) ששייכים אליו כ-active - כפתור אחר לא שייך לאותו target מאבד את הסימון
+function scrollToNavTarget(targetId) {
+  const targetEl = document.getElementById(targetId);
+  if (targetEl) {
+    targetEl.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
+  document.querySelectorAll(".nav-link, .bottom-nav-link").forEach((btn) => {
+    btn.classList.toggle("active", btn.getAttribute("data-scroll-target") === targetId);
+  });
+}
+
+document.querySelectorAll(".nav-link, .bottom-nav-link").forEach((btn) => {
+  const targetId = btn.getAttribute("data-scroll-target");
+  if (!targetId) {
+    return; // כפתורי "+"/"עוד" בניווט התחתון לא גוללים בעצמם - יש להם handler נפרד למטה
+  }
+  btn.addEventListener("click", function () {
+    scrollToNavTarget(targetId);
+  });
+});
+
+// "מה תרצי להוסיף?" - נפתח מכפתור ה-"+" בניווט התחתון
+document.getElementById("quick-actions-button").addEventListener("click", function () {
+  document.getElementById("quick-actions-overlay").style.display = "flex";
+});
+
+function closeQuickActionsOverlay() {
+  document.getElementById("quick-actions-overlay").style.display = "none";
+}
+
+document.getElementById("quick-actions-close-button").addEventListener("click", closeQuickActionsOverlay);
+document.getElementById("quick-actions-overlay").addEventListener("click", function (event) {
+  if (event.target.id === "quick-actions-overlay") {
+    closeQuickActionsOverlay();
+  }
+});
+
+document.getElementById("quick-action-expense").addEventListener("click", function () {
+  closeQuickActionsOverlay();
+  scrollToNavTarget("expenses-section");
+  const firstExpenseInput = document.getElementById(fixedFields[0].id);
+  if (firstExpenseInput) {
+    firstExpenseInput.focus({ preventScroll: true });
+  }
+});
+
+document.getElementById("quick-action-income").addEventListener("click", function () {
+  closeQuickActionsOverlay();
+  openAddIncomeSourceModal(); // פונקציה קיימת - לא נוצר כאן טופס חדש. פותחת מודאל מלא-מסך, אז אין צורך לגלול קודם
+});
+
+document.getElementById("quick-action-quick-expense").addEventListener("click", function () {
+  closeQuickActionsOverlay();
+  openAddQuickExpenseModal(); // פונקציה קיימת - לא נוצר כאן טופס חדש. פותחת מודאל מלא-מסך, אז אין צורך לגלול קודם
+});
+
+document.getElementById("quick-action-goal").addEventListener("click", function () {
+  closeQuickActionsOverlay();
+  scrollToNavTarget("goals-section");
+  const goalNameInput = document.getElementById("goal-name");
+  if (goalNameInput) {
+    goalNameInput.focus({ preventScroll: true });
+  }
+});
+
+// "עוד" - יעדי ניווט שלא נכנסים לניווט התחתון הקומפקטי
+document.getElementById("more-nav-button").addEventListener("click", function () {
+  document.getElementById("more-nav-overlay").style.display = "flex";
+});
+
+function closeMoreNavOverlay() {
+  document.getElementById("more-nav-overlay").style.display = "none";
+}
+
+document.getElementById("more-nav-close-button").addEventListener("click", closeMoreNavOverlay);
+document.getElementById("more-nav-overlay").addEventListener("click", function (event) {
+  if (event.target.id === "more-nav-overlay") {
+    closeMoreNavOverlay();
+  }
+});
+
+document.querySelectorAll("#more-nav-overlay .quick-action-item").forEach((btn) => {
+  btn.addEventListener("click", function () {
+    closeMoreNavOverlay();
+    scrollToNavTarget(btn.getAttribute("data-scroll-target"));
+  });
+});
+
 // מציגות את הכל פעם אחת כשהעמוד נטען
 document.getElementById("current-month-label").textContent = getCurrentMonthLabel();
 populateQuickExpenseCategoryOptions();
