@@ -690,11 +690,13 @@ function renderBudgetTable() {
       row.classList.add("near-budget");
     }
 
+    const remainingText = remaining < 0 ? "−" + formatMoney(Math.abs(remaining)) : formatMoney(remaining);
+
     row.innerHTML =
       "<td>" + field.label + "</td>" +
       "<td>" + formatMoney(planned) + "</td>" +
       "<td>" + formatMoney(actual) + "</td>" +
-      "<td>" + formatMoney(remaining) + "</td>";
+      "<td>" + remainingText + "</td>";
 
     tableBody.appendChild(row);
   });
@@ -979,12 +981,17 @@ function renderHistoryTable() {
 
   historyNewestFirst.forEach((month) => {
     const row = document.createElement("tr");
+    const remainingCellHtml =
+      month.remaining < 0
+        ? '<td style="color: var(--color-expenses)">−' + formatMoney(Math.abs(month.remaining)) + "</td>"
+        : "<td>" + formatMoney(month.remaining) + "</td>";
+
     row.innerHTML =
       "<td>" + month.month + "</td>" +
       "<td>" + formatMoney(month.income) + "</td>" +
       "<td>" + formatMoney(month.expenses) + "</td>" +
       "<td>" + formatMoney(month.savings) + "</td>" +
-      "<td>" + formatMoney(month.remaining) + "</td>" +
+      remainingCellHtml +
       '<td><button class="history-delete" data-id="' + month.id + '" aria-label="מחק רשומה">🗑️</button></td>';
     tableBody.appendChild(row);
   });
