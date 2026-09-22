@@ -940,6 +940,15 @@ function renderHistoryTable() {
   const tableBody = document.getElementById("history-table-body");
   tableBody.innerHTML = "";
 
+  // מצב רשימה ריקה (שלב UI-3d) - אותו class="cashflow-empty" הקיים, אבל בתוך <tr><td colspan>
+  // כי tbody יכול להכיל רק <tr> (לא div ישירות). class="history-empty-row" משמש רק לתיקון
+  // CSS ממוקד במובייל (ר' style.css) - לא משפיע על שום שורת נתונים אחרת בטבלה הזו או באחרות.
+  if (budgetData.history.length === 0) {
+    tableBody.innerHTML =
+      '<tr class="history-empty-row"><td colspan="6"><div class="cashflow-empty">אין עדיין היסטוריה חודשית להצגה</div></td></tr>';
+    return;
+  }
+
   // .slice() יוצר עותק של הרשימה, ו-.reverse() הופך את הסדר - כך שהאחרון שנוסף מוצג ראשון
   const historyNewestFirst = budgetData.history.slice().reverse();
 

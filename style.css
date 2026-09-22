@@ -1243,6 +1243,17 @@ body {
     border-bottom: 1px solid var(--color-border);
   }
 
+  /* מצב ריק בהיסטוריה החודשית (שלב UI-3d) - מבטלת את עיצוב "כותרת" שהכלל הקודם
+     מוסיף לתא הראשון (מיועד לשם חודש/קטגוריה אמיתיים), כדי שהודעת .cashflow-empty
+     תיראה טבעית ולא כמו כותרת מודגשת. class="history-empty-row" קיים רק על שורת
+     הריק עצמה - לא משפיעה על שום שורת נתונים אחרת, בהיסטוריה או בטבלאות אחרות. */
+  .budget-table tr.history-empty-row td:first-child {
+    font-weight: 400;
+    padding-bottom: 0;
+    margin-bottom: 0;
+    border-bottom: none;
+  }
+
   #budget-table-body td:nth-child(2)::before { content: "מתוכנן"; color: var(--color-text-muted); font-size: 12px; }
   #budget-table-body td:nth-child(3)::before { content: "בפועל"; color: var(--color-text-muted); font-size: 12px; }
   #budget-table-body td:nth-child(4)::before { content: "נשאר"; color: var(--color-text-muted); font-size: 12px; }
