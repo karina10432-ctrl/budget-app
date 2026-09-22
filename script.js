@@ -268,7 +268,14 @@ function renderDashboard() {
   document.getElementById("income-value").textContent = formatMoney(totalIncome);
   document.getElementById("expenses-value").textContent = formatMoney(expenses.total);
   document.getElementById("savings-value").textContent = formatMoney(totalSavings);
-  document.getElementById("remaining-value").textContent = formatMoney(remaining);
+  const remainingEl = document.getElementById("remaining-value");
+  if (remaining < 0) {
+    remainingEl.textContent = "−" + formatMoney(Math.abs(remaining));
+    remainingEl.style.color = "var(--color-expenses)";
+  } else {
+    remainingEl.textContent = formatMoney(remaining);
+    remainingEl.style.color = "";
+  }
 
   // שורת הפירוט: כמה מההוצאות קבועות וכמה משתנות
   document.getElementById("expenses-breakdown").textContent =
@@ -339,8 +346,14 @@ function renderSpendingLimitCard(totalIncome, expensesTotal, totalSavings, remai
   const projectedRemaining = totalIncome - projectedTotalExpenses - totalSavings;
 
   valueEl.textContent = formatMoney(Math.round(dailyAllowance));
-  breakdownEl.textContent =
-    days.daysLeft + " ימים נשארו · בקצב הנוכחי צפוי להישאר: " + formatMoney(Math.round(projectedRemaining));
+  if (projectedRemaining < 0) {
+    breakdownEl.innerHTML =
+      days.daysLeft + " ימים נשארו · בקצב הנוכחי צפוי להישאר: " +
+      '<span style="color: var(--color-expenses)">−' + formatMoney(Math.abs(Math.round(projectedRemaining))) + "</span>";
+  } else {
+    breakdownEl.textContent =
+      days.daysLeft + " ימים נשארו · בקצב הנוכחי צפוי להישאר: " + formatMoney(Math.round(projectedRemaining));
+  }
 }
 
 // מציגה את "סיכום החודש" (שלב 14) - תצוגה מרוכזת בלבד, בלי שום חישוב כספי חדש:
@@ -355,7 +368,14 @@ function renderMonthSummaryCard() {
   document.getElementById("month-summary-income").textContent = formatMoney(totalIncome);
   document.getElementById("month-summary-expenses").textContent = formatMoney(expenses.total);
   document.getElementById("month-summary-savings").textContent = formatMoney(totalSavings);
-  document.getElementById("month-summary-remaining").textContent = formatMoney(remaining);
+  const summaryRemainingEl = document.getElementById("month-summary-remaining");
+  if (remaining < 0) {
+    summaryRemainingEl.textContent = "−" + formatMoney(Math.abs(remaining));
+    summaryRemainingEl.style.color = "var(--color-expenses)";
+  } else {
+    summaryRemainingEl.textContent = formatMoney(remaining);
+    summaryRemainingEl.style.color = "";
+  }
 
   // התקדמות החודש - לפי getDaysInfo() הקיימת, בלי חישוב תאריכים חדש
   const days = getDaysInfo();
@@ -684,6 +704,11 @@ function renderBudgetTable() {
 function renderSavingsGoals() {
   const container = document.getElementById("goals-list");
   container.innerHTML = "";
+
+  if (budgetData.savingsGoals.length === 0) {
+    container.innerHTML = '<div class="cashflow-empty">אין עדיין מטרות חיסכון</div>';
+    return;
+  }
 
   budgetData.savingsGoals.forEach((goal) => {
     const remaining = goal.target - goal.saved;
@@ -1792,6 +1817,11 @@ function renderQuickExpenses() {
   const container = document.getElementById("quick-expenses-list");
   container.innerHTML = "";
 
+  if (budgetData.quickExpenses.length === 0) {
+    container.innerHTML = '<div class="cashflow-empty">אין עדיין הוצאות מהירות להצגה</div>';
+    return;
+  }
+
   budgetData.quickExpenses.forEach((qe) => {
     const card = document.createElement("div");
     card.className = "goal-card";
@@ -2667,7 +2697,12 @@ function renderBalanceForecastSection() {
 
     const balanceSpan = document.createElement("span");
     balanceSpan.className = "cashflow-cumulative";
-    balanceSpan.textContent = "יתרה לאחר האירוע: " + formatMoney(runningBalance);
+    if (runningBalance < 0) {
+      balanceSpan.innerHTML =
+        "יתרה לאחר האירוע: " + '<span style="color: var(--color-expenses)">−' + formatMoney(Math.abs(runningBalance)) + "</span>";
+    } else {
+      balanceSpan.textContent = "יתרה לאחר האירוע: " + formatMoney(runningBalance);
+    }
 
     row.appendChild(mainDiv);
     row.appendChild(amountSpan);
