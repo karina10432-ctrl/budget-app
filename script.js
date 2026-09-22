@@ -2747,6 +2747,73 @@ document.querySelectorAll("#more-nav-overlay .quick-action-item").forEach((btn) 
   });
 });
 
+// לחיצה על "Budget App" ב-navbar העליון חוזרת ל-Home (שלב UI-3a) - קוראת ל-scrollToNavTarget
+// הקיימת עם אותו target בדיוק כמו כפתור "בית", בלי שום לוגיקת ניווט חדשה
+document.getElementById("app-navbar-brand-button").addEventListener("click", function () {
+  scrollToNavTarget("dashboard-section");
+});
+
+// ===== Scroll-spy: מסמנת "פעיל" לפי מה שבאמת נראה על המסך כרגע (שלב UI-3a) =====
+// שיפור למנגנון הסימון הקיים (שעד עכשיו התעדכן רק בקליק על קישור ניווט): אם המשתמשת
+// גוללת בעצמה בלי ללחוץ על שום קישור, "המסך הפעיל" נשאר תקוע על מה שנלחץ לאחרונה - וזה
+// עלול להטעות. הקוד הזה לא מחליף את scrollToNavTarget ולא את הסימון המיידי שהיא כבר
+// עושה בקליק - הוא רק מוסיף בדיקה נוספת, קלה ומתוזמנת (throttled), שמעדכנת את אותו
+// class="active" הקיים בדיוק לפי הסקשן שבאמת נמצא כרגע מתחת ל-navbar. קריאה-בלבד -
+// לא נוגעת בשום נתון, חישוב, או localStorage.
+// הסדר כאן חייב להתאים לסדר האמיתי של הסקשנים בעמוד (לא לסדר התפריט!) - כי הלולאה
+// ב-updateActiveNavOnScroll בודקת "מי כבר עברנו" לפי סדר המערך, מלמעלה למטה בדיוק
+// כמו שהם מסודרים בפועל ב-index.html: Home, ניתוח (charts-row), הכנסות, הוצאות,
+// תקציבים, לוח שנה, הגדרות.
+const NAV_SCROLL_SPY_TARGETS = [
+  "dashboard-section", "analysis-section", "income-section",
+  "expenses-section", "budgets-section", "calendar-card", "settings-section",
+];
+
+let navScrollSpyTicking = false;
+
+function updateActiveNavOnScroll() {
+  navScrollSpyTicking = false;
+
+  // גובה ה-navbar העליון (אם מוצג) - כדי לבדוק "מה נמצא ממש מתחת לניווט הקבוע",
+  // ולא סתם "מה הכי קרוב לראש הדף" (חשוב כי ה-navbar דביק ומכסה חלק מהתצוגה)
+  const navbar = document.querySelector(".app-navbar");
+  const navbarHeight = navbar && getComputedStyle(navbar).display !== "none" ? navbar.offsetHeight : 0;
+  const referenceLine = navbarHeight + 40;
+
+  let currentTargetId = NAV_SCROLL_SPY_TARGETS[0];
+
+  // אם גללנו עד ממש לתחתית העמוד - מסמנות את הסקשן האחרון כפעיל, גם אם הוא קצר מדי
+  // מכדי שהראש שלו יגיע בפועל עד ל-referenceLine (אי אפשר לגלול מעבר לסוף המסמך,
+  // אז "הכנסות/הוצאות/תקציבים/הגדרות" הקצרים בסוף העמוד לא היו מסומנים אף פעם בלי זה)
+  const isNearBottom = window.scrollY + window.innerHeight >= document.documentElement.scrollHeight - 2;
+
+  if (isNearBottom) {
+    currentTargetId = NAV_SCROLL_SPY_TARGETS[NAV_SCROLL_SPY_TARGETS.length - 1];
+  } else {
+    NAV_SCROLL_SPY_TARGETS.forEach((targetId) => {
+      const el = document.getElementById(targetId);
+      if (el && el.getBoundingClientRect().top <= referenceLine) {
+        currentTargetId = targetId;
+      }
+    });
+  }
+
+  document.querySelectorAll(".nav-link, .bottom-nav-link").forEach((btn) => {
+    btn.classList.toggle("active", btn.getAttribute("data-scroll-target") === currentTargetId);
+  });
+}
+
+window.addEventListener(
+  "scroll",
+  function () {
+    if (!navScrollSpyTicking) {
+      navScrollSpyTicking = true;
+      requestAnimationFrame(updateActiveNavOnScroll);
+    }
+  },
+  { passive: true }
+);
+
 // מציגות את הכל פעם אחת כשהעמוד נטען
 document.getElementById("current-month-label").textContent = getCurrentMonthLabel();
 document.getElementById("home-month-label").textContent = getCurrentMonthLabel(); // כותרת Home (UI-2a) - אותה פונקציה קיימת, לא חישוב תאריך חדש
