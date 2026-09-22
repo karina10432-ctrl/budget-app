@@ -584,6 +584,14 @@ body {
   font-weight: 600;
 }
 
+/* שורה שמתקרבת לחריגה (80%+ מהתקציב, אך עוד לא חצתה אותו) - אזהרה עדינה בענבר,
+   כדי שיובחן בבירור מ-over-budget (אדום) בלי להיראות "דחוף" מדי (שלב UI-3b) */
+.budget-table tr.near-budget td {
+  background-color: #fffbeb;
+  color: #b45309;
+  font-weight: 600;
+}
+
 /* רשימת מטרות החיסכון */
 .goals-list {
   margin-top: 20px;
@@ -1203,6 +1211,11 @@ body {
     color: #b91c1c;
   }
 
+  .budget-table tr.near-budget {
+    background-color: #fffbeb;
+    color: #b45309;
+  }
+
   .budget-table td {
     border-bottom: none;
     padding: 4px 0;
@@ -1213,6 +1226,10 @@ body {
   }
 
   .budget-table tr.over-budget td {
+    background-color: transparent;
+  }
+
+  .budget-table tr.near-budget td {
     background-color: transparent;
   }
 

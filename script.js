@@ -274,6 +274,11 @@ function renderDashboard() {
   document.getElementById("expenses-breakdown").textContent =
     "קבועות " + formatMoney(expenses.fixedTotal) + " · משתנות " + formatMoney(expenses.variableTotal);
 
+  // סיכום סה"כ בתחתית expenses-section (שלב UI-3b) - אותם ערכים בדיוק שכבר חושבו
+  // למעלה ב-expenses (calculateExpensesBreakdown), בלי שום חישוב נוסף
+  document.getElementById("expenses-fixed-total-value").textContent = formatMoney(expenses.fixedTotal);
+  document.getElementById("expenses-variable-total-value").textContent = formatMoney(expenses.variableTotal);
+
   renderBudgetTable();
   renderSpendingLimitCard(totalIncome, expenses.total, totalSavings, remaining);
 
@@ -656,9 +661,13 @@ function renderBudgetTable() {
 
     const row = document.createElement("tr");
 
-    // אם הוגדר תקציב (planned > 0) והוא נחצה - מדגישים את השורה באדום
+    // אם הוגדר תקציב (planned > 0) והוא נחצה - מדגישים את השורה באדום. אם עוד לא נחצה
+    // אבל כבר הגענו ל-80% ומעלה ממנו - מדגישים באזהרה עדינה (near-budget, שלב UI-3b).
+    // הסף של 80% הוא תצוגתי בלבד - לא נוגע ב-planned/actual/remaining עצמם.
     if (planned > 0 && remaining < 0) {
       row.classList.add("over-budget");
+    } else if (planned > 0 && remaining >= 0 && actual / planned >= 0.8) {
+      row.classList.add("near-budget");
     }
 
     row.innerHTML =

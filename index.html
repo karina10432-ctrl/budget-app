@@ -295,39 +295,39 @@
         <h3 class="expenses-subtitle">הוצאות קבועות</h3>
         <div class="expenses-grid">
           <div class="form-row">
-            <label for="exp-rent">שכר דירה</label>
+            <label for="exp-rent">🏠 שכר דירה</label>
             <input type="number" id="exp-rent" min="0" placeholder="0">
           </div>
           <div class="form-row">
-            <label for="exp-arnona">ארנונה</label>
+            <label for="exp-arnona">🧾 ארנונה</label>
             <input type="number" id="exp-arnona" min="0" placeholder="0">
           </div>
           <div class="form-row">
-            <label for="exp-electricity">חשמל</label>
+            <label for="exp-electricity">💡 חשמל</label>
             <input type="number" id="exp-electricity" min="0" placeholder="0">
           </div>
           <div class="form-row">
-            <label for="exp-water">מים</label>
+            <label for="exp-water">💧 מים</label>
             <input type="number" id="exp-water" min="0" placeholder="0">
           </div>
           <div class="form-row">
-            <label for="exp-vaad">ועד בית</label>
+            <label for="exp-vaad">🏢 ועד בית</label>
             <input type="number" id="exp-vaad" min="0" placeholder="0">
           </div>
           <div class="form-row">
-            <label for="exp-internet">אינטרנט</label>
+            <label for="exp-internet">🌐 אינטרנט</label>
             <input type="number" id="exp-internet" min="0" placeholder="0">
           </div>
           <div class="form-row">
-            <label for="exp-phone">טלפון</label>
+            <label for="exp-phone">📱 טלפון</label>
             <input type="number" id="exp-phone" min="0" placeholder="0">
           </div>
           <div class="form-row">
-            <label for="exp-insurance">ביטוחים</label>
+            <label for="exp-insurance">🛡️ ביטוחים</label>
             <input type="number" id="exp-insurance" min="0" placeholder="0">
           </div>
           <div class="form-row">
-            <label for="exp-subscriptions">מנויים</label>
+            <label for="exp-subscriptions">📺 מנויים</label>
             <input type="number" id="exp-subscriptions" min="0" placeholder="0">
           </div>
         </div>
@@ -335,41 +335,54 @@
         <h3 class="expenses-subtitle">הוצאות משתנות</h3>
         <div class="expenses-grid">
           <div class="form-row">
-            <label for="exp-super">סופר</label>
+            <label for="exp-super">🛒 סופר</label>
             <input type="number" id="exp-super" min="0" placeholder="0">
           </div>
           <div class="form-row">
-            <label for="exp-restaurants">מסעדות ואוכל בחוץ</label>
+            <label for="exp-restaurants">🍽️ מסעדות ואוכל בחוץ</label>
             <input type="number" id="exp-restaurants" min="0" placeholder="0">
           </div>
           <div class="form-row">
-            <label for="exp-transport">תחבורה</label>
+            <label for="exp-transport">🚌 תחבורה</label>
             <input type="number" id="exp-transport" min="0" placeholder="0">
           </div>
           <div class="form-row">
-            <label for="exp-car">רכב</label>
+            <label for="exp-car">🚗 רכב</label>
             <input type="number" id="exp-car" min="0" placeholder="0">
           </div>
           <div class="form-row">
-            <label for="exp-shopping">קניות</label>
+            <label for="exp-shopping">🛍️ קניות</label>
             <input type="number" id="exp-shopping" min="0" placeholder="0">
           </div>
           <div class="form-row">
-            <label for="exp-fun">בילויים</label>
+            <label for="exp-fun">🎉 בילויים</label>
             <input type="number" id="exp-fun" min="0" placeholder="0">
           </div>
           <div class="form-row">
-            <label for="exp-health">בריאות</label>
+            <label for="exp-health">🏥 בריאות</label>
             <input type="number" id="exp-health" min="0" placeholder="0">
           </div>
           <div class="form-row">
-            <label for="exp-other">שונות</label>
+            <label for="exp-other">📦 שונות</label>
             <input type="number" id="exp-other" min="0" placeholder="0">
           </div>
         </div>
 
         <button type="submit">עדכן הוצאות</button>
       </form>
+
+      <!-- סיכום סה"כ הוצאות קבועות/משתנות (שלב UI-3b) - תצוגה בלבד, לא שדה קלט.
+           משתמשת מחדש ב-class הקיים income-sources-total (אותו עיצוב כמו "סה״כ הכנסות"),
+           והערכים מגיעים מ-calculateExpensesBreakdown() הקיימת - מתעדכנים אוטומטית
+           בתוך renderDashboard() בלי שום חישוב חדש. -->
+      <div class="income-sources-total">
+        <span>סה"כ הוצאות קבועות</span>
+        <span class="income-sources-total-value" id="expenses-fixed-total-value">₪0</span>
+      </div>
+      <div class="income-sources-total">
+        <span>סה"כ הוצאות משתנות</span>
+        <span class="income-sources-total-value" id="expenses-variable-total-value">₪0</span>
+      </div>
     </section>
 
     <!-- תקציבים חודשיים - רק להוצאות המשתנות -->
@@ -379,35 +392,35 @@
       <form id="budgets-form">
         <div class="expenses-grid">
           <div class="form-row">
-            <label for="budget-super">סופר</label>
+            <label for="budget-super">🛒 סופר</label>
             <input type="number" id="budget-super" min="0" placeholder="0">
           </div>
           <div class="form-row">
-            <label for="budget-restaurants">מסעדות ואוכל בחוץ</label>
+            <label for="budget-restaurants">🍽️ מסעדות ואוכל בחוץ</label>
             <input type="number" id="budget-restaurants" min="0" placeholder="0">
           </div>
           <div class="form-row">
-            <label for="budget-transport">תחבורה</label>
+            <label for="budget-transport">🚌 תחבורה</label>
             <input type="number" id="budget-transport" min="0" placeholder="0">
           </div>
           <div class="form-row">
-            <label for="budget-car">רכב</label>
+            <label for="budget-car">🚗 רכב</label>
             <input type="number" id="budget-car" min="0" placeholder="0">
           </div>
           <div class="form-row">
-            <label for="budget-shopping">קניות</label>
+            <label for="budget-shopping">🛍️ קניות</label>
             <input type="number" id="budget-shopping" min="0" placeholder="0">
           </div>
           <div class="form-row">
-            <label for="budget-fun">בילויים</label>
+            <label for="budget-fun">🎉 בילויים</label>
             <input type="number" id="budget-fun" min="0" placeholder="0">
           </div>
           <div class="form-row">
-            <label for="budget-health">בריאות</label>
+            <label for="budget-health">🏥 בריאות</label>
             <input type="number" id="budget-health" min="0" placeholder="0">
           </div>
           <div class="form-row">
-            <label for="budget-other">שונות</label>
+            <label for="budget-other">📦 שונות</label>
             <input type="number" id="budget-other" min="0" placeholder="0">
           </div>
         </div>
