@@ -1584,22 +1584,54 @@ function renderIncomeSources() {
   const container = document.getElementById("income-sources-list");
   container.innerHTML = "";
 
-  budgetData.income.sources.forEach((source) => {
-    const card = document.createElement("div");
-    card.className = "goal-card";
-    card.innerHTML =
-      '<div class="goal-header">' +
-      '<span class="goal-name">' + source.name + "</span>" +
-      '<span class="income-source-actions">' +
-      '<button type="button" class="income-source-edit" data-id="' + source.id + '" aria-label="ערוך מקור הכנסה">✏️</button>' +
-      '<button type="button" class="goal-delete" data-id="' + source.id + '" aria-label="מחק מקור הכנסה">🗑️</button>' +
-      "</span>" +
-      "</div>" +
-      '<div class="income-source-amount">' + formatMoney(source.amount) + "</div>";
-    container.appendChild(card);
-  });
+  // מחושב פעם אחת ומשמש גם לשורת הסה"כ וגם לאחוז של כל מקור (שלב UI-3c) - קריאה
+  // יחידה ל-calculateTotalIncome() הקיימת, בלי שום שינוי בה ובלי חישוב מקביל חדש
+  const totalIncome = calculateTotalIncome();
 
-  document.getElementById("income-sources-total-value").textContent = formatMoney(calculateTotalIncome());
+  // מצב רשימה ריקה (שלב UI-3c) - אותו class="cashflow-empty" הקיים שכבר משמש בכל
+  // מקום אחר באפליקציה לרשימות ריקות (פירוט הוצאות, השוואת תקציב, לוח שנה וכו')
+  if (budgetData.income.sources.length === 0) {
+    container.innerHTML = '<div class="cashflow-empty">אין עדיין מקורות הכנסה להצגה</div>';
+  } else {
+    // אחוזים שמסתכמים תמיד לבדיוק 100% (שלב UI-3c) - שיטת "השארית הגדולה ביותר":
+    // מעגלות כל אחוז כלפי מטה, ואז מוסיפות 1% לשורות עם השארית העשרונית הגדולה ביותר,
+    // עד שסכום האחוזים המוצגים מגיע בדיוק ל-100. לא נוגעת בסכומים עצמם - עיגול תצוגתי בלבד.
+    let displayPercents = [];
+    if (totalIncome > 0) {
+      const exactPercents = budgetData.income.sources.map((source) => (source.amount / totalIncome) * 100);
+      displayPercents = exactPercents.map((p) => Math.floor(p));
+      let missingPoints = 100 - displayPercents.reduce((sum, p) => sum + p, 0);
+
+      const byRemainderDesc = exactPercents
+        .map((p, index) => ({ index: index, remainder: p - displayPercents[index] }))
+        .sort((a, b) => b.remainder - a.remainder);
+
+      for (let i = 0; i < missingPoints; i++) {
+        displayPercents[byRemainderDesc[i].index] += 1;
+      }
+    }
+
+    budgetData.income.sources.forEach((source, index) => {
+      const card = document.createElement("div");
+      card.className = "goal-card";
+
+      // כשאין הכנסה כלל (totalIncome === 0) לא מציגות אחוז, כדי לא לחלק ב-0
+      const percentText = totalIncome > 0 ? " · " + displayPercents[index] + "%" : "";
+
+      card.innerHTML =
+        '<div class="goal-header">' +
+        '<span class="goal-name">' + source.name + "</span>" +
+        '<span class="income-source-actions">' +
+        '<button type="button" class="income-source-edit" data-id="' + source.id + '" aria-label="ערוך מקור הכנסה">✏️</button>' +
+        '<button type="button" class="goal-delete" data-id="' + source.id + '" aria-label="מחק מקור הכנסה">🗑️</button>' +
+        "</span>" +
+        "</div>" +
+        '<div class="income-source-amount">' + formatMoney(source.amount) + percentText + "</div>";
+      container.appendChild(card);
+    });
+  }
+
+  document.getElementById("income-sources-total-value").textContent = formatMoney(totalIncome);
 }
 
 // כשעורכים מקור קיים, שומרת כאן את ה-id שלו. null = מוסיפות מקור חדש (בדיוק כמו editingEventId)
